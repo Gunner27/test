@@ -94,3 +94,3892 @@ create job:
       
       -----
       config.xml will be generated with jenkins url.
+      
+      
+      ======================================================
+      
+
+
+
+
+
+
+
+Matrix Installation Manual
+October, 2018
+Version 2.4
+
+
+
+
+
+
+
+Document Release Note
+
+Notice No.:
+Customer: Nokia
+Project: Nokia Matrix Platform
+Document details
+Name
+Version no.
+Description
+Matrix Installation Manual
+        2.4
+
+Describes installation of all components included in Matrix platform
+Revision details
+Action taken
+(add/del/change)
+Previous
+page no.
+New page no.
+Revision description
+
+
+
+
+
+Change Register serial numbers covered:
+The documents or revised pages are subject to document control.
+Please keep them up-to-date using the release notices from the distributor of the document.
+These are confidential documents. Unauthorised access or copying is prohibited.
+
+Approved by: Mohanram Kemparaju
+Date: 
+
+
+Authorised by: 
+Date: 
+
+Document Revision List
+
+Customer: Nokia
+Project: Nokia Matrix Platform
+Document Name: Matrix Installation Manual
+Release Notice Reference (for release)
+Rev. No.
+Revision date
+Revision description
+Page no.
+Previous page no.
+Action taken
+Addenda/New page
+Release notice reference
+1
+7-9-2018
+Added Workaround procedure for Code Generation in APICurio section
+
+Added installation procedure for TCS tools Project explorer, Operation Catalog Tool, Spinning up environment for CICD, Matrix Health check
+
+
+added
+
+
+2
+12-9-2018
+Updated configmaps, schema.sql, Keycloak client creation for Catalog Tool and Jira webhook creation and Git token generation
+
+
+Updated CICD procedures for TCS tools
+
+
+Updated
+
+
+3
+19-9-2018
+Added Workflow manager and Yang modeller installation procedure and validation steps after deployment of TCS tools
+
+
+added
+
+
+4
+20-9-2018
+Added Templates document
+
+Added configmap yaml in Workflow manager
+
+
+
+
+added
+
+
+5
+8-10-2018
+Added Backup and Restore Installtion procedure
+
+
+added
+
+
+6
+9-10-2018
+Templates-updated Jira artifacts creation procedure
+
+Updated Project explorer and Catalog tool CICD jobs
+
+Added gitlab settings for hooks to trigger in Gitlab deployment on Openshift procedure
+
+Added roles and permission configurations in Jira and Confluence installation 
+
+
+
+
+
+
+Added
+
+
+
+
+Project Explorer schema updated and Execution Jenkins, Keycloak credentials configured in configmap
+
+Spinning Up environment for CICD section has been updated
+
+Configuration for Prometheus has been updated
+
+Added Jenkins Job creation procedure for Matrix Health check
+
+
+
+
+
+
+
+7
+12-10-2018
+Added Jenkins Adapter deployment on Openshift
+
+Added procedure for handling timeouts in haproxy
+
+Added command for changing timeouts for Workflow Manager application
+
+
+Added
+
+
+
+
+
+Contents
+Introduction	12
+Openshift (ocp3.6) on Openstack (osp10) manual installation steps	12
+Hawkular Metrics - Installation and Integration	15
+GitLab VM Installation	16
+  JIRA, Jira Confluence Installation	18
+  Deploying Prometheus and Grafana along with AlertManager in open-shift	23
+  Keycloak Single Sign On	26
+ MongoDB Deployment on Openshift	66
+Postgres Deployment on Openshift	67
+ Jenkins Deployment on Openshift through GUI	68
+ Minio Deployment on Openshift	69
+ Gitlab Deployment on Openshift	71
+ Nexus Deployment on Openshift	75
+ Sonarqube Deployment on Openshift	89
+ APICurio with Postgres Installation on Openshift	101
+ EFK Deployment on Openshift	107
+TCS Tools:	115
+Operation Catalog Tool	115
+    	127
+ CICD	127
+ Project Explorer	181
+ Matrix Health Check	193
+Workflow Manager	208
+Yang Modelling Tool	226
+Templates	231
+Backup & Recovery	233
+Light Matrix	237
+Jenkins Adapter Deployment on Openshift	238
+Appendix	243
+
+
+
+
+Introduction
+Document includes installations steps of all components used in Matrix Platform
+Openshift (ocp3.6) on Openstack (osp10) manual installation steps
+Below figure illustrates reference architecture of Openshift 
+Figure1: Openshift Reference Architecture
+
+In the current setup, three master nodes, that is, one infrastructure node and two application nodes have been installed.An additional application node is included separately.
+Prerequisites and Preparation           
+Openshift Installation procedure depends on a number of services and settings that must be in place before proceeding. 
+Openshift Installation procedure assumes:
+Red Hat OpenStack Platform 10 or later
+Openstack Platform(OSP) Port security controls must be enabled in neutron service
+RHOSP user account and credentials
+A Red Hat Enterprise Linux cloud image pre-loaded in glance (Nokia-customized Red Hat images were used. With these images, there were package mismatch issues between already enabled repos and ocp3.6. It is suggested to use images from Redhat site)
+A Red Hat Enterprise Linux update subscription credentials (user/password or Satellite server)
+An SSH keypair pre-loaded in nova
+A publicly available neutron network for inbound access
+A pool of floating IP addresses to provide inbound access 
+Local DNS server to provide hostname resolution for local cluster
+An existing LDAP or Active Directory service for user identification and authentication
+
+Please follow below URL, Openshift 3.6 reference architecture documentation provided by Redhat:
+https://access.redhat.com/documentation/en-us/reference_architectures/2017/html-single/deploying_and_managing_red_hat_openshift_container_platform_3.6_on_red_hat_openstack_platform_10/#deployment_of_red_hat_openshift_container_platform_3_6
+
+Steps deviated from Openshift redhat documentation: 
+1. Commented out below line in inventory file
+#openshift_node_local_quota_per_fsgroup=512Mi 
+
+2.For openshift master and infra instances,it is better to schedule them on different hypervisors  keeping in view of  node failure.This can  be achieved by using anti-affinity group in openstack
+i) Create the anti-affinity group 
+openstack server group create --policy anti-affinity <servergroup2>
+ii) Boot the nova instance with the anti-affinity group
+nova boot ... ... --hint group=group-id instance-name ..
+
+
+Plese find below KEDB (Known Error Data Base) Document-
+
+
+
+Handling Timeouts:
+For long running digimops services and applications we need to configure timeout in each application route as well as in haproxy configuration.
+In file /etc/haproxy/haproxy.cfg, Change client_timeout and server_timeout as shown below:
+
+Note: This timeout need to be changed as per the requirement.
+
+
+
+
+Hawkular Metrics - Installation and Integration
+
+INTRODUCTION 
+
+	Hawkular metrics is a metrics engine, which stores the data persistently in a Cassandra database. With this configuration, memory and network-based metrics are viewable from the openshift container platform web console. These metrics, can then be used for horizontal pod autoscaling. 
+
+	Heapster retrieves a list of all the nodes from master server, then contacts each node individually. Then it scrapes the metrics for CPU, memory, and network usage and exports them into hawkular metrics. 
+
+Installation 
+
+	Please follow below URL:
+
+https://access.redhat.com/documentation/en-us/reference_architectures/2017/html-
+single/deploying_and_managing_red_hat_openshift_container_platform_3.6_on_red_hat_openstack_platform_10/#deployment_of_red_hat_openshift_container_platform_3_6
+
+
+GitLab VM Installation
+   Below link for reference to Gitlab installation specifications:
+           https://docs.gitlab.com/ce/install/requirements.html 
+	
+           Below link for reference to Gitlab packages:
+               https://packages.gitlab.com/gitlab/gitlab-ce 
+
+Below steps to be followed to install Gitlab:
+
+1. Launch VM 
+2. Create cinder volume in Openstack and attach it to the VM
+3. Check the path of cinder volume attached to VM by navigating to Volumes section in Openstack
+4. Login to VM and execute below commands as Sudo to install Gitlab
+mke2fs <path of cinder volume>
+mkdir /mnt/gitlab
+mkdir /mnt/gitlab/git-data
+mount <path of cinder volume> /mnt/gitlab/git-data/
+lsblk
+subscription-manager register --username <Redhat username> --password <Redhat password>
+subscription-manager attach --pool <pool id>
+subscription-manager repos --enable="rhel-7-server-rpms" --enable="rhel-7-server-extras-rpms"
+yum update -y
+yum install -y git
+yum install -y lokkit
+yum install -y curl policycoreutils-python openssh-server cronie
+lokkit -s http -s ssh
+yum install -y postfix
+service postfix start
+service postfix status
+chkconfig postfix on
+yum install wget
+wget --content-disposition https://packages.gitlab.com/gitlab/gitlab-ce/packages/el/7/gitlab-ce-9.4.4-ce.0.el7.x86_64.rpm/download.rpm 
+rpm -i gitlab-ce-9.4.4-ce.0.el7.x86_64.rpm 
+
+vi /etc/gitlab/gitlab.rb
+Add below line
+git_data_dirs({
+"default" => { "path" => "/mnt/gitlab/git-data" }
+})
+
+gitlab-ctl reconfigure
+gitlab-ctl restart
+
+
+  JIRA, Jira Confluence Installation
+Installation guide for JIRA software 
+
+Pre-requisites:
+Install wget using command “yum install wget”
+JAVA should be installed
+https://www.tecmint.com/install-java-jdk-jre-on-rhel-centos-fedora/
+
+Install JIRA s/w version 7:
+1) Download jira s/w from - https://www.atlassian.com/software/jira/download (tar.gz) and copy to VM being used to launch JIRA
+
+Login to VM 
+1.1 Create the user "jirauser" and create password in OS level
+	sudo useradd jirauser
+	sudo passwd jirauser
+
+su – jirauser
+
+1.2 Create the installation directory
+$mkdir jirasoftware
+1.3 Extract the jira tar.gz file to your "jirasoftware" directory.
+    Change to the directory to where you have downloaded Jira and then execute these commands:
+$ tar -xzf atlassian-jira-software-X.X.X.tar.gz -C jirasoftware
+$ cd jirasoftware
+
+2) Give your dedicated JIRAUSER read, write and execute permission to your <installation-directory>. 
+$ chown -R jirauser jirasoftware
+$ chmod -R u=rwx,go-rwx jirasoftware
+
+3. Create the home directory and provide your dedicated JIRAUSER read, write and execute permissions to the HOME-DIRECTORY.
+$ mkdir jirasoftware-home
+$ chown -R jirauser jirasoftware-home
+$ chmod -R u=rwx,go-rwx jirasoftware-home
+
+4 Tell Jira where to find your jirasoftware-home when it starts up. There are two ways to do this:
+Edit jirasoftware/atlassian-jira-software-x.x.x-standalone/atlassian-jira/WEB-INF/classes/jira-application.properties
+Add jira.home=/<path>/jirasoftware-home
+
+5. Check the ports.
+By default, Jira listens on port 8080. If you have another application running on your server that uses the same port, mention the details of a different port using server.xml.
+
+Path of server.xml: jirasoftware/atlassian-jira-software-x.x.x-standalone/conf/
+
+6. Start Jira.
+./home_local/jirauser/jirasoftware/atlassian-jira-software-x.x.x-standalone/bin/start-jira.sh
+
+7 Go to http://<IP address>:8080. Check and confirm jira up and running. Check process: ps -ef | grep jira 
+
+8. Connect to your database (MySQL).
+8.1 Create and configure the MySQL database.
+-Install MYSQL database in our VM and perform the following steps:
+              https://www.tecmint.com/install-latest-mysql-on-rhel-centos-and-fedora/
+
+mysql -u root -p
+CREATE USER 'jiradbuser'@'*' IDENTIFIED BY 'Jiradbuser@123';
+CREATE DATABASE jiradb CHARACTER SET utf8 COLLATE utf8_bin;
+GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER,INDEX,REFERENCES on jiradb.* TO 'jiradbuser'@'<JIRA-Server-Hostname>' IDENTIFIED BY 'Jiradbuser@123'; 
+
+There is a Lock table error while taking database backup for Jira.
+To overcome this we need to grant permissions to that table by the following command;
+GRANT SELECT,LOCK TABLES ON jiradb.* TO 'jiradbuser'@'<JIRA-Server-Hostname>';
+
+flush privileges;
+
+9 Copy the MySQL JDBC driver to your application server, download from below link https://confluence.atlassian.com/jira061/jira-installation-and-upgrade-guide/connecting-jira-to-a-database/connecting-jira-to-mysql
+cp  mysql-connector-java-5.x.x-bin.jar /home_local/jirauser/jirasoftware/atlassian-jira-software-x.x.x-standalone/lib
+ 
+10 Copy the MySQL JDBC driver jar to the <JIRA installation directory>/lib/ directory and provide full permissions for your new/upgraded installation but before running the Setup Wizard.
+
+
+11 Restart Jira.
+ ./home_local/jirauser/jirasoftware/atlassian-jira-software-x.x.x-standalone/bin/stop-jira.sh
+ ./home_local/jirauser/jirasoftware/atlassian-jira-software-x.x.x-standalone/bin/start-jira.sh
+ 
+ 
+Refer to the following URLs:
+https://confluence.atlassian.com/adminjiraserver071/installing-jira-applications-on-linux-from-archive-file-855475657.html
+https://confluence.atlassian.com/jira061/jira-installation-and-upgrade-guide/connecting-jira-to-a-database/connecting-jira-to-mysql
+
+
+Installation Document for Jira Confluence						
+
+Pre-requisites:
+Install wget using command “yum install wget”
+JAVA should be installed
+https://www.tecmint.com/install-java-jdk-jre-on-rhel-centos-fedora/
+					 
+Install a JIRA Confluence version 7:
+
+Login to VM
+1) Download Jira Confluence s/w from https://www.atlassian.com/software/confluence/download/data-center(tar.gz)
+1.1 Create the user "jirauser" at OS level.
+sudo useradd jirauser
+	sudo passwd jirauser
+
+su - jirauser
+1.2 Create the installation directory.
+$mkdir jirasoftware
+1.3 Extract the Jira Cofluence tar.gz file to your "jirasoftware" directory.
+ Change to the directory where you downloaded JIRA Confluence then execute these commands:
+$ tar -xzf atlassian-confluence-X.X.X.tar.gz -C jirasoftware
+$ cd jirasoftware
+
+2) Provide your dedicated JIRAUSER  read, write and execute permission to your <installation-directory>. 
+$ chown -R jirauser jirasoftware
+$ chmod -R u=rwx,go-rwx jirasoftware
+
+3. Create the home directory and provide your dedicated JIRAUSER read, write and execute permissions to the HOME-DIRECTORY
+$ mkdir jirasoftware-home
+$ chown -R jirauser jirasoftware-home
+$ chmod -R u=rwx,go-rwx jirasoftware-home
+
+4 Mention the path to locate Jira when it starts up (jirasoftware-home). There are two ways to do this :
+Edit jirasoftware/atlassian-confluence-x.x.x/confluence/WEB-INF/classes/confluence-init.properties
+Add confluence.home=/<path>/jirasoftware-home
+
+5. Check the ports
+By default, Jira listens on port 8090. If you have another application running on your server that uses the same ports, specify the details of a different port using server.xml.
+
+Path to server.xml: jirasoftware/atlassian-confluence-x.x.x/conf
+
+6. Start Confluence.
+./jirasoftware/atlassian-confluence-6.6.2/bin/start-confluence.sh
+
+7 Go to http://<IP address>:8090. Check and confirm jira up and running
+also check process ps -ef | grep jira 
+
+8. Connect to your database (MySQL)
+8.1 Create and configure the MySQL database
+https://www.tecmint.com/install-latest-mysql-on-rhel-centos-and-fedora/
+
+-Install MYSQL database in our VM and done the following steps
+mysql -u root -p
+CREATE USER 'jiradbuser'@'*' IDENTIFIED BY 'Jiradbuser@123';
+CREATE DATABASE jiradb CHARACTER SET utf8 COLLATE utf8_bin;
+GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,ALTER,INDEX,REFERENCES on jiradb.* TO 'jiradbuser'@'<JIRA-Server-Hostname>' IDENTIFIED BY 'Jiradbuser@123';  
+flush privileges;
+
+9 Copy the MySQL JDBC driver to your application server, download jar from below link
+https://confluence.atlassian.com/jira061/jira-installation-and-upgrade-guide/connecting-jira-to-a-database/connecting-jira-to-mysql
+cp  mysql-connector-java-5.x.x-bin.jar /home_local/jirauser/jirasoftware/atlassian-confluence-6.6.1/lib
+ 
+10 Copy the MySQL JDBC driver jar to the <JIRA installation directory>/lib/ directory and provide full permissions for your new/upgraded installation but before running the Setup Wizard.
+
+11 Restart Jira.
+./jirasoftware/atlassian-confluence-6.6.2/bin/stop-confluence.sh
+./jirasoftware/atlassian-confluence-6.6.2/bin/start-confluence.sh
+
+Note: Refer to the following URLs.
+https://www.atlassian.com/software/confluence/download/data-center(tar.gz)
+https://confluence.atlassian.com/adminjiraserver071/installing-jira-applications-on-linux-from-archive-file-855475657.html
+	
+Note:
+Please update my.cnf file with below details under mysqld section, if issues are observed while setting up Confluence while configuring database:
+[mysqld]
+…….
+character-set-server=utf8
+collation-server=utf8_bin
+transaction-isolation=READ-COMMITTED
+
+wait_timeout = 31536000
+max_allowed_packet=64M
+…….
+
+
+            Roles and Permissions configurations in Jira:
+           Below procedure to be followed for roles and permissions configurations in Jira:
+            
+
+
+  Deploying Prometheus and Grafana along with AlertManager in open-shift
+
+Procedure
+Go to instances-->Login to any of the master using ssh
+
+
+
+Labelling nodes in openshift :
+
+First, label all the nodes in the openshift cluster with any desired key-value pair.
+Command : oc label node <nodename> “key=value”
+Ex : oc label node <nodename> “selector=monitor”
+
+Cloning the code
+Clone the code from the URL:-
+git clone https://github.com/akram/openshift-prometheus-grafana.git
+cd openshift-prometheus-grafana/
+Copy https://github.com/debianmaster/openshift-examples/blob/master/promethus/grafana-dashboard.json  jsonfile  into the path openshift-prometheus-grafana/tree/master/grafana-config/grafana-dashboards/
+
+Execute the following commands for installing Prometheus , Grafana and Alert-manager
+
+oc new-project monitoring
+After creating the project, edit the namespace to add node selector details.
+$oc edit namespace monitoring
+Under annotations, add the following line (make sure of the indentation):
+openshift.io/node-selector: selector=monitor
+oc new-app docker.io/hawkular/hawkular-grafana-datasource
+oc expose svc hawkular-grafana-datasource
+oc adm policy add-cluster-role-to-user cluster-reader system:serviceaccount:monitoring:default
+oc create configmap grafana-config --from-file=grafana-config/grafana
+oc volume --add dc/hawkular-grafana-datasource --name config-volume -t configmap --configmap-name  grafana-config -m /etc/grafana --overwrite
+oc create -f https://raw.githubusercontent.com/hawkular/hawkular-openshift-agent/master/deploy/openshift/hawkular-openshift-agent-configmap.yaml -n monitoring
+oc process -f https://raw.githubusercontent.com/hawkular/hawkular-openshift-agent/master/deploy/openshift/hawkular-openshift-agent.yaml IMAGE_VERSION="latest"| oc create -n monitoring -f -
+oc adm policy add-cluster-role-to-user hawkular-openshift-agent system:serviceaccount:monitoring:hawkular-openshift-agent
+oc new-app prom/prometheus
+oc annotate svc prometheus prometheus.io/scrape='true'
+oc patch dc prometheus -p '[{"op": "replace", "path": "/spec/template/spec/containers/0/args", "value":["--config.file=/etc/prometheus/prometheus.yml","--storage.local.path=/prometheus","-web.console.libraries=/usr/share/prometheus/console_libraries","-web.console.templates=/usr/share/prometheus/consoles" , "-alertmanager.url=http://alertmanager.monitoring.svc:9093" ] } ]' --type=json
+oc create -f prometheus-config/prometheus-env.yaml
+oc create -f prometheus-config/prometheus-configmap.yaml
+If pods are not up and gets a forbidden error
+oc edit scc privileged
+change these values to true:
+allowHostNetwork: true
+allowHostPID: true
+allowHostPorts: true
+and run these commands:
+oc delete daemonset node-exporter
+oc create -f prometheus-node-exporter-daemonset.yaml
+
+Add firewall rules:
+login to bastion and run this command
+ansible -b nodes -i <path to inventory-file> -m shell -a "iptables -A OS_FIREWALL_ALLOW -p tcp -m state --state NEW -m tcp --dport 9100 -j ACCEPT"
+
+oc create configmap prometheus-rules --from-file=prometheus-config/prometheus-rules
+oc volume --add dc/prometheus --name config-volume -t configmap --configmap-name  prometheus-configmap -m /etc/prometheus --overwrite
+oc volume --add dc/prometheus --name rules-volume  -t configmap --configmap-name  prometheus-rules     -m /etc/prometheus-rules --overwrite
+oc env dc prometheus  --from=configmap/prometheus-env
+oc create serviceaccount node-exporter
+oc adm policy add-scc-to-user privileged system:serviceaccount:monitoring:node-exporter
+oc new-app prom/alertmanager
+oc annotate svc alertmanager prometheus.io/scrape='true'
+oc annotate svc alertmanager prometheus.io/path='/metrics'
+oc create configmap alertmanager-templates --from-file=alertmanager-config/alertmanager-templates
+oc create -f alertmanager-config/alertmanager-configmap.yaml
+oc volume --add dc/alertmanager --name config-volume     -t configmap --configmap-name  alertmanager-configmap -m /etc/alertmanager           --overwrite
+oc volume --add dc/alertmanager --name templates-volume  -t configmap --configmap-name alertmanager-templates -m /etc/alertmanager-templates –overwrite
+oc create configmap grafana-import-dashboards --from-file=grafana-config/grafana-dashboards/
+oc volume --add dc/hawkular-grafana-datasource --name dashboards-volume -t configmap --configmap-name  grafana-import-dashboards  -m /var/lib/grafana/dashboards --overwrite
+
+To view openshift console:
+
+https://<Openshift hostname>:8443/console/
+
+Changes to be made in Prometheus DeploymentConfig File:
+Navigate to Monitoring project in openshift.
+Navigate to Applications tab → Deployments → Prometheus.
+
+Navigate to Actions tab → Edit YAML → Line 58 → Replace Image with prom/prometheus@sha256:b42c332444b25270d8eb56a07efaa31ff6e0f8471bbba67958dc396bfbc5f903-→ Save → Create routes and access them using Routes option in openshift
+
+To view Prometheus, Grafana and Alert-manager dashboards
+Navigate to Monitoring project in openshift.
+Navigate to routes and add them to hosts file in windows.
+ 
+Add prometheus as Datasource and Dashboard in grafana
+Navigate to Grafana Route and Login into it as username:- admin,Password:- admin
+
+Adding Data source
+Navigate to Grafana menu → Data Sources → Add Data Source. Enter the details. 
+Name as:- ${DS_PROMETHEUS}
+Type:-prometheus
+URL:-http://prometheus-monitoring.infra-node-0.control.ocp3.matrix.com/
+Access:-Proxy
+Click Save.
+
+Viewing Dashboard
+Grafana menu → Dashboards
+
+Viewing Alerts
+Navigate to prometheus URL → Alerts
+
+For more information have a look into this link
+https://github.com/akram/openshift-prometheus-grafana
+
+  Keycloak Single Sign On
+Keycloak is an open source Identity and Access Management Server. This server is used to add authentication to applications and secure services. 
+Users authenticate with Keycloak rather than individual applications. This means that your applications don't have to deal with login forms, authenticating users, and storing users. Once logged-in to Keycloak, users don't have to login again to access a different application.
+This also applied to logout. Keycloak provides single-sign out, which means users only have to logout once to be logged-out of all applications that use Keycloak.
+
+
+User Federation
+Keycloak has built-in support to connect to existing LDAP or Active Directory servers. You can also implement your own provider if you have users in other stores, such as a relational database. 
+Installing the Keycloak Server as docker image:
+Inorder to have Openshift integrated with keycloak, we need to first secure keycloak.Steps to be followed inorder to secure keycloak:
+PRE-REQUISITES:
+Java and Docker should be installed on the VM in which we launch Keycloak as a container.
+JAVA Installation reference:
+https://tecadmin.net/install-java-8-on-centos-rhel-and-fedora/#
+
+1. Go to the host/VM on which we launch Keycloak as a container.
+2.Create directory called “ssoCerts” and go to that directory and generate the certificates as follows:
+keytool -genkey -alias <localhost> -keyalg RSA -keystore keycloak.jks -validity 10950 
+NOTE: Enter the password as “secret” and the “First name/last name” with your hostname.(Not the IP Address or some other name).
+In the above command replace the “localhost” with your hostname.My hostname is “apigatewayvm”...so the command looks like:
+keytool -genkey -alias apigatewayvm -keyalg RSA -keystore keycloak.jks -validity 10950
+In the further steps don't forget to replace localhost with hostname.
+keytool -certreq -alias <localhost> -keystore keycloak.jks > keycloak.careq
+
+Do “Enter keystore password:secret”
+openssl genrsa -out rootCA.key 2048
+openssl req -x509 -new -nodes -key rootCA.key -days 1024 -out rootCA.pem
+openssl x509 -req -in keycloak.careq -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out keycloak-ca.crt -days 500
+keytool -import -keystore keycloak.jks -file rootCA.pem -alias root
+keytool -import -alias localhost -keystore keycloak.jks -file keycloak-ca.crt
+
+Do Enter keystore password: secret
+Certificate reply was installed in keystore
+Here are the list of files that are generated after following the above steps:
+
+keycloak-ca.crt 
+keycloak.careq 
+keycloak.jks 
+rootCA.key 
+rootCA.pem 
+rootCA.srl
+
+Inorder to have “ldaps” integrated with keycloak, get the certificates of LDAP into the host/VM where you want to launch keycloak as a container.
+
+keytool -import -alias <localhost> -keystore truststore.jks -file host-certificate.cer
+
+In the above “host-certificate.cer” is the ldap certificate.
+
+Now we have to change the configuration of Keyclaok in the “standalone.xml” file. We can get this file by downloading “Standalone server distribution” from Keycloak's official website.Once you download it you will find “standalone.xml” file in the following path:
+
+keycloak-3.3.0.Final/standalone/configuration
+
+sample Standalone.xml 
+
+Open “standalone.xml” file in your editor and make the following changes:
+To the security-realms element add:
+<security-realm name="UndertowRealm">
+<server-identities>
+<ssl>
+<keystore path="keycloak.jks" relative-to="jboss.server.config.dir" keystore-password="secret" />
+</ssl>
+</server-identities>
+</security-realm>
+Find the element <server name="default-server"> (it's a child element of <subsystem xmlns="urn:jboss:domain:undertow:1.2">) and add:
+<https-listener name="https" socket-binding="https" security-realm="UndertowRealm"/>
+Remove the already existing <https-listener> and add the above.
+Under the <subsystem xmlns="urn:jboss:domain:keycloak-server:1.1"> tag add the following spi:
+<spi name="truststore">
+    <provider name="file" enabled="true">
+        <properties>
+            <property name="file" value="path to your .jks file containing public certificates"/>
+            <property name="password" value="password"/>
+            <property name="hostname-verification-policy" value="WILDCARD"/>
+            <property name="disabled" value="false"/>
+        </properties>
+    </provider>
+</spi>
+
+Now save the standalone.xml file with all the above changes.
+Now run the following commands to bring up Keycloak as a container:
+First launch a basic keycloak container by giving the below command:
+
+docker run -d docker.io/jboss/keycloak:3.3.0.Final 
+
+Command to check the container ID 
+sudo docker ps
+
+A container is created above. Now to the existing container we need to copy the modified “standalone.xml” file as below:
+
+docker cp /root/standalone.xml 7af406b4a5ed:/opt/jboss/keycloak/standalone/configuration/
+
+Here “ 7af406b4a5ed” is the container id of the keycloak container.
+We should also move Keycloak.jks and truststore.jks as shown below:
+
+docker cp /root/ssoCerts/keycloak.jks 7af406b4a5ed:/opt/jboss/keycloak/standalone/configuration/
+docker cp /root/ssoCerts/truststore.jks 7af406b4a5ed:/opt/jboss/
+
+Now commit the container so that the changes that we made gets permanent.
+
+docker commit 7af406b4a5ed sso
+
+Here ”sso” is the name of the new image with all the above changes.
+With the new image “sso” we will bring up our final keycloak.
+By default there is no admin user created so you won't be able to login to the admin console. To create an admin account you need to use environment variables to pass in an initial username and password. This is done by running: 
+docker run -p 8089:8080 -p 9885:8443 -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=admin -d sso
+
+-p stands for port-forwading...where 8089:8080 8089 stands for host port and 8080 is the container port.
+Now you can go to console and access your keycloak http on port number 8089 and https on port number 9885
+.
+eg:https://10.50.68.41:9885
+http://10.50.68.41:8089 
+Where 10.50.68.41 is the IP of the VM on which we launched Keycloak as a container.
+One thing to note is that Keycloak runs by default on port 8080. Port mapping has been done in above command to run the Keycloak server on port 8089.
+Keycloak server will now be up and running. To check that it's working open http://10.50.68.41:8089 . Then click on Administration Console the username is “admin” and password is “admin”  
+
+
+We will be redirected to below page after logging in:
+        
+We have to create a realm to add clients(Service provider i.e any application which is secured by Keycloak)
+Create a New Realm
+Place the mouse over the top left corner drop down menu that is titled with Select Realm. If you are logged in the master realm this drop down menu lists all the realms created. The last entry of this drop down menu is always Add Realm. Click this to add a realm.
+
+This menu option will bring you to the Add Realm page. You will be creating a brand new realm from scratch so enter in Matrix for the realm name and click Create 
+
+
+
+The current realm will now be set to “Matrix”
+Configuring LDAP for Keycloak. 
+To configure with Keycloak server, click “User Federation” and then choose “Add Provider” as “LDAP”. The below screen shots provide the detail options that is required to integrate with LDAP. Please use your LDAP configuration values and click save.
+
+
+
+Click save.
+Click on “Test Connection” and “Test Authentication” to check if we have provided valid credentials.
+Once when you login into any of the applications that is configured with SSO with any of the user that is present in LDAP,then you can see the user details in the Keycloak UI.
+To check the users click on Users and then click on View all users.
+In order to map the Groups from LDAP the following Configuration should be done:
+Go to the LDAP User federation > Mappers as shown below:
+click on “create” button present on the right hand side. You will be redirected to below screen:
+select “group-ldap-mapper” from the drop-down. You will be redirected to another page:
+
+Enter the value of “LDAP Groups DN “ filed as “ou=groups,dc=matrix-intra,dc=net” and click on “Save”
+The configuration looks like below after saving:
+
+NOKIA LDAP CONFIGURATION:
+To Integrate Nokia LDAP with Keycloak follow the below configuration:
+In the Realm go to User Federation > Add Provider > ldap
+
+You will be redirected to the below page where you have to do the following configuration:
+The below screen shots provide the detail options that is required to integrate with LDAP. Please use your LDAP configuration values and click save. 
+
+Bind credential is the password present to that user in the Nokia LDAP.
+Click on “Test Connection” and “Test Authentication” to check if we have provided valid credentials.
+
+Make sure that the configuration is same. Otherwise Integration fails.
+Jira Single Sign On(SSO) using Jboss Keycloak as Idp.
+To configure SSO for Jira using Jboss Keycloak, we should add a plugin in jira tool.
+1. Login to Jira tool with user having admin access.
+2. To download a plugin, click on Add Ons from below screen. Click on “Find new add-ons”.
+
+3. Search with 'miniorange saml plugin' and download the plugin. After successful download, below screen is seen on click of plugin.
+
+4. Adding Jira as client in Keycloak.
+a. Login to keycloak (http://10.50.68.41:8089) with admin credentials(username:admin, password:admin)
+b. Select the realm 'Matrix' created above from left top most dropdown.
+c. From left menu, select Clients.
+
+d. Click on “Create” button to create a new client. Provide below values for creating a client.
+Client ID
+The SP-EntityID / Issuer from the plugin downloaded in Jira tool, under Configure IDP tab.
+Ex: 
+http://10.50.68.44:8080
+Name
+Provide a name for this client (Eg. Jira)
+Description
+Provide a description (Eg. Jira site)
+Enabled
+ON
+Client Protocol
+SAML
+Include AuthnStatement
+ON
+Sign Documents
+ON
+Sign Assertions
+ON
+Signature Algorithm
+RSA_SHA256
+Canonicalization Method
+EXCLUSIVE
+Force Name ID Format
+ON
+Name ID Format
+username
+Root URL
+The ACS (Assertion Consumer Service) URL from the step 1 of the plugin under Configure IDP tab. 
+Ex:http://10.50.68.44:8080/plugins/servlet/saml/auth 
+Valid Redirect URIs
+The ACS (Assertion Consumer Service) URL from the step 1 of the plugin under configure IDP tab.
+Ex: http://10.50.68.44:8080/plugins/servlet/saml/auth 
+Assertion Consumer Service POST Binding URL
+The ACS (Assertion Consumer Service) URL from the step 1 of the plugin under Configure IDP tab.
+http://10.50.68.44:8080/plugins/servlet/saml/auth 
+Logout Service Redirect Binding URL
+The Single Logout URL from the step 1 of the plugin under Configure IDP tab.
+http://10.50.68.44:8080/plugins/servlet/saml/logout 
+
+
+
+
+
+NOTE: Here select the “Name ID Format” as “username” from the dropdown instead of “email”.
+e. click on save.
+5. Configuring Jira as Service Provider.
+a. Go to, https://<YOUR_DOMAIN>>/auth/realms/{YOUR_REALM}/protocol/saml/descriptor. This will open an XML in the browser.
+In <YOUR_DOMAIN>>, Ip address should be provided 
+At {YOUR_REALM}, realm name should be provided.
+
+b. In miniOrange SAML plugin, go to Configure SP Tab. Enter the following values:  
+IDP Entity ID:
+Search for entityID from above xml. Enter it's value in this textbox.
+Single Sign On URL:
+Search for SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect". Enter the Location value in the textbox.
+Single Logout URL:
+Search for: SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST". Enter the Location value in the textbox.
+X.509 Certificate:
+Enter the X509Certificate tag value in this textbox.
+
+c. Click on 'Test configuration' in Configure SP tab to check whether Keycloak server is configured correctly.
+Below page opens on click of 'Test configuration'.
+
+d. Check the checkbox "Do not update attributes of existing users" under "User Profile" tab.
+e. Check the checkboxes "Disable Group Mapping: Do not update groups of existing users." and "Restrict User Creation based on Group Mapping: Create users only if their groups are mapped" under "User Groups" tab.
+f. In 'Sign in Settings' tab, enable the 'auto redirect to Idp' checkbox. Check the checkbox : "Enable Backdoor Login ".
+
+
+Settings related to LDAP side:
+Under the "Administration" dropdown, go to "Applications" > "Application access" >  "User Management" > "User Directories" > "LDAP Server" > click on "Edit"...then go to "Advacnced seetings" > and then change the "Synchronisation Interval (minutes): 20" ,(i.e change the vaue to 20) and then change the "Read Timeout (seconds): 60" (i.e change the vaue to 60), and then change the "Search Timeout (seconds): 60" " (i.e change the vaue to 60) ,and then change the "Connection Timeout (seconds):10"  (i.e change the vaue to 10).
+Note:
+According to the requirement, if a user wants to login to Jira, the user should be present in any one of the group. So we will be creating a group called “jira-users” group in LDAP and add all the users who want to access  jira to that group, and add  the “jira-users” group to “Application access” default group in JIRA.
+If you try to access Jira, it will auto redirect to Keycloak login page for authentication.
+
+
+Confluence Single Sign On(SSO) using Jboss Keycloak as Idp.
+To configure SSO for Confluence using Jboss Keycloak, we should add a plugin in Confluence tool.
+1. Login to Confluence tool with user having admin access.
+2.To download a plugin, click on Add Ons from below screen. Click on “Find new add-ons”.
+
+3. Search with 'miniorange saml plugin' and download the plugin. After successful download, below screen is seen on click of plugin.
+
+4. Adding Confluence as client in Keycloak.
+a. Login to keycloak (http://10.50.68.41:8089) with admin credentials(username:admin, password:admin)
+b. Select the realm 'Matrix' created above from left top most dropdown.
+c. From left menu, select Clients.
+
+d. Click on “Create” button to create a new client. Provide below values for creating a client.
+
+Client ID
+The SP-EntityID / Issuer from the plugin downloaded in Confluence tool, under Configure IDP tab.
+Ex: 
+http://10.50.68.39:8090
+Name
+Provide a name for this client (Eg. Confluence)
+Description
+Provide a description (Eg. confluence site)
+Enabled
+ON
+Client Protocol
+SAML
+Include AuthnStatement
+ON
+Sign Documents
+ON
+Sign Assertions
+ON
+Signature Algorithm
+RSA_SHA256
+Canonicalization Method
+EXCLUSIVE
+Force Name ID Format
+ON
+Name ID Format
+username
+Root URL
+The ACS (Assertion Consumer Service) URL from the step 1 of the plugin under Configure IDP tab. 
+Ex:http://10.50.68.39:8090/plugins/servlet/saml/auth 
+Valid Redirect URIs
+The ACS (Assertion Consumer Service) URL from the step 1 of the plugin under configure IDP tab.
+Ex: http://10.50.68.39:8090/plugins/servlet/saml/auth 
+
+Assertion Consumer Service POST Binding URL
+The ACS (Assertion Consumer Service) URL from the step 1 of the plugin under Configure IDP tab.
+http://10.50.68.39:8090/plugins/servlet/saml/auth 
+Logout Service Redirect Binding URL
+The Single Logout URL from the step 1 of the plugin under Configure IDP tab.
+http://10.50.68.39:8090/plugins/servlet/saml/logout 
+
+
+
+
+NOTE: Here select the “Name ID Format” as “username” from the dropdown instead of “email”.
+e. click on save.
+5.Configuring Confluence as Service Provider.
+a. Go to, https://<YOUR_DOMAIN>>/auth/realms/{YOUR_REALM}/protocol/saml/descriptor. This will open an XML in the browser.
+In <YOUR_DOMAIN>>, Ip address should be provided 
+At {YOUR_REALM}, realm name should be provided.
+
+b. In miniOrange SAML plugin, go to Configure SP Tab. Enter the following values:  
+IDP Entity ID:
+Search for entityID from above xml. Enter it's value in this textbox.
+Single Sign On URL:
+Search for SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect". Enter the Location value in the textbox.
+Single Logout URL:
+Search for: SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST". Enter the Location value in the textbox.
+X.509 Certificate:
+Enter the X509Certificate tag value in this textbox.
+
+1.c. Click on 'Test configuration' in Configure SP tab to check whether Keycloak server is configured correctly.
+Below page opens on click of 'Test configuration'.
+
+
+d. Check the checkbox “Disable Attribute Mapping: If checked, attributes of existing users will not be updated." under "Attribute Mapping “tab.
+
+e. Check the checkbox "Disable Group Mapping: If checked, groups of existing users will not be updated." under "Group Mapping" tab.
+f. In 'Sign in Settings' tab, enable the 'auto redirect to Idp' checkbox. 
+
+
+
+
+Another configuration that need to be done is:
+Go to the “Administration Icon” present at the top right corner. Under the drop down select “General Configuration”.
+
+
+Once you select ““General Configuration” on the left hand side under “USERS & SECURITY “ select “Global Permissions” . There click on “Edit Permissions” present on the right hand side.
+
+After “Edit permission” is clicked   you will be redirected to below page:
+
+
+Under “Licensed Users” >  “Grant browse permissions to” enter the name of the group “jira-users” i.e the group that we are adding all users to if the user wants to login to jira and check the check boxes “can use” ,”Personal Space”,”Create Space(s)”  then click on “Add”. Now the users that are part of “jira-users” group will have an access to Confluence.
+Note: 
+If a user wants to login to Jira, the user should be present in any one of the group. So we will be creating a group called “jira-users” group in LDAP and add all the users who want to access  jira to that group, and add  the “jira-users” group to “Application access” default group in JIRA. So in the confluence the same group should be added in the GlobalPermission as done above.
+If you try to access Confluence, it will auto redirect to Keycloak login page for authentication.
+
+
+OPENSHIFT'S INTEGRATION WITH SSO:
+CONFIGURATION ON KEYCLOAK SIDE:
+Go to Keycloak.Create a respective Client in Matrix Realm.
+Steps to be followed for creating client in Keycloak:
+1.Go to the Keycloak login page and enter valid credentials.Here go to the Keycloak using “https” i.e https://10.50.68.41:9885 and then follow the below procedure of creating a client.
+2.After logging in Select the realm 'Matrix' created above from left top most dropdown.
+3.click on "Clients" on the left hand side.It looks as below:
+4.Click on the "create" button which is present on the right hand side .
+
+5.As show below "Client ID" can be given any value for our understanding purpose.Here we are using "openshift" so that we can understand from the name that Client we are adding is openshift.Select the "Cline Protocol" as "openid-connect".Click save.
+
+6.After saving you will be redirected to page as shown below:
+
+7.Here select the "Aceess Type" to be "confidential".
+8.In the "Valid Redirect URI" enter the URL where your service portal is running and add "/*" at the end of URL.
+eg: " https://openshift4-halb.project.matrix.com:8443/*"
+9.In the “Admin Url” enter the value as “https://openshift4-halb.project.matrix.com:8443”.
+This is the configuration needed from the Keycloak side.
+CONFIGURATION ON OPENSHIFT SIDE:
+1.Copy the “rootCA.pem” certificate that was generated into “/etc/origin/master/” directory of all the masters.
+2.Open “master-config.yaml” file present in “/etc/origin/master/” directory.Under “Identity Providers” section add the following content:
+
+3.To get the value of the “client secret”, go to the client that was created for openshift in Keycloak.Go to the “Credentials” tab and there you can find “secret” as shown below:
+
+Here the value for “client id” is the name of the client that we give during client creation in keycloak.The “authorize” value is the “ https://apigatewayvm:8070/auth/realms/Test/protocol/openid-connect/auth” where “apigatewayvm” is the name of the host where Keycloak is present as a container.”Test” is the name of the Realm under which we created the “openshift” client.
+4.In the “master-config.yaml” file search for “logoutURL” and give the value for it as shown below:
+logoutURL: "https://apigatewayvm:8070/auth/realms/Test/protocol/openid-connect/logout?redirect_uri=https://openshift4-halb.project.matrix.com:8443/console"
+Save the “master-config.yaml” file.
+5.After saving the file enter the following commands one after the another in both the masters.
+systemctl restart atomic-openshift-master-api.service
+systemctl restart atomic-openshift-master-controllers.service
+NOTE:Donot execute the above “systemctl restart” commands parallely on both the masters. First do it in one master and then go to another master.
+6.Update the “hosts” file with ipaddress and the hostname of the VM where you launched keycloak as a container. So that openshift can resolve the hostname into its IP address. Do this step in all the masters you have.
+Eg:
+10.50.68.41 apigatewayvm
+This is the configuration on openshift's side.
+NOTE:Add the entry “10.50.68.41 apigatewayvm” in the /etc/hosts file of the host where you access the Openshift. 
+If the Openshift is behind proxy,we have to add the entries for sso in the following 3 files.
+
+Steps to be followed:
+1. Login into one of the master.
+2. Switch to root user as : sudo su
+3. Then use the command:
+"env | grep proxy"
+Output:
+http_proxy=http://10.158.100.1:8080/
+ftp_proxy=http://10.158.100.1:8080/
+https_proxy=http://10.158.100.1:8080/
+no_proxy=localhost,127.0.0.1,instance-data,169.254.169.254,.nsn-net.net,.nsn-rdnet.net,.ext.net.nokia.com,.int.net.nokia.com,.inside.nsn.com,.inside.nokiasiemensnetworks.com,.project.stagingmatrix.com,.svc.cluster.local
+
+4. Now add the entries for sso with the below command:
+
+export no_proxy="localhost,127.0.0.1,instance-data,169.254.169.254,.nsn-net.net,.nsn-rdnet.net,.ext.net.nokia.com,.int.net.nokia.com,.inside.nsn.com,.inside.nokiasiemensnetworks.com,.project.stagingmatrix.com,.svc.cluster.local,sso,10.129.210.120"
+
+NOTE:
+Here we have added "sso,10.129.210.120", where sso is the hostname of the VM where we launched Keycloak as a  container, and "10.129.210.120" is the IP address of the VM where we launched Keycloak.
+
+5. Go to the file /etc/sysconfig/atomic-openshift-master and add the entries for sso in NO_PROXY variable
+Command: vi /etc/sysconfig/atomic-openshift-master
+
+NO_PROXY=.cluster.local,.ext.net.nokia.com,.inside.nokiasiemensnetworks.com,.inside.nsn.com,.int.net.nokia.com,.nsn-net.net,.nsn-rdnet.net,.project.matrix.com,.project.stagingmatrix.com,.svc,.svc.cluster.local,127.0.0.1,169.254.169.254,172.30.0.1,172.30.0.10,172.30.0.15,172.30.0.7,app-node-0.project.stagingmatrix.com,app-node-1.project.stagingmatrix.com,app-node-2.project.stagingmatrix.com,app-node-3.project.stagingmatrix.com,app-node-4.project.stagingmatrix.com,app-node-5.project.stagingmatrix.com,infra-node-0.project.stagingmatrix.com,infra-node-1.project.stagingmatrix.com,infra-node-2.project.stagingmatrix.com,instance-data,localhost,master-0.project.stagingmatrix.com,master-1.project.stagingmatrix.com,master-2.project.stagingmatrix.com,172.30.0.0/16,10.128.0.0/14,sso,10.129.210.120
+
+Edit the valiable "NO_PROXY" with sso entries i.e "sso,10.129.210.120"
+
+6.Add the entries for sso in NO_PROXY variable in the other two files /etc/sysconfig/atomic-openshift-master-api , /etc/sysconfig/atomic-openshift-master-controllers also.
+
+
+6. Restart the services:
+systemctl restart atomic-openshift-master-api.service
+systemctl restart atomic-openshift-master-controllers.service
+
+Follow the above steps in all the masters that we have.​
+Now try to access your Openshift application.
+You will be automatically redirected to the Keycloak login page.
+
+
+
+Plese find below KEDB (Known Error Data Base) Document of mini-orange plugin
+
+
+ MongoDB Deployment on Openshift
+Follow below steps for MongoDB deployment on Openshift:
+1.  Create a project in openshift
+2. click on Add-to-project and select Browse Catalog option
+3. Search for mongo image and select MONGODB persistent image and click create
+4. Mongo DB will be deployed on to Openshift
+5. Expose Mongo service as NodePort to connect from Mongo Booster/some other third party application
+oc expose dc/<dcName> --type=NodePort --port=27017 --name=mongoext 
+Once the port is exposed, need to open exposed port in the node security group of Openstack to accept connections on the exposed NodePort.
+
+
+Postgres Deployment on Openshift
+Follow below steps for Postgres deployment on Openshift:
+1. Create a project in openshift
+2. click on Add-to-project and select Browse Catalog option
+3. Search for Postgres image and select Postgresql persistent image and click create
+4. Postgres DB will be deployed on to Openshift
+5. Expose Postgres service as NodePort to connect from PgAdmin/some other third party application
+      oc expose dc <dcName> --type=NodePort --port=5432 --name=postgresext 
+Once the port is exposed, need to open exposed port in the node security group of Openstack to accept connections on the exposed NodePort.
+
+
+ Jenkins Deployment on Openshift through GUI
+Follow below steps for Jenkins on Openshift through GUI:
+1. Create a project in Openshift (Test)
+2. Click on Add-to-project and Under Browse-catalog we can click Continuous Integration & Deployment.
+(Test >> Add-to-project >> catalog >> Continuous Integration & deployment)
+3. Now we can select Jenkins (Persistent).
+4. And we can pass the Memory limit & Volume capacity parameters.
+5. Refer the following picture.
+
+6. After creating pod, we can access Jenkins through ROUTES.
+
+
+ Minio Deployment on Openshift
+Follow below steps for Minio deployment on Openshift:
+Pre-Installation Steps: 
+To perform OpenShift commands you need to have OpenShift client (relevant version) in a system from where you can reach OpenShift cluster or you can login to master node of the cluster. 
+OpenShift login (This step can be skipped if logged into master node): 
+OpenShift details required OpenShift URL (e.g.: https://haproxy.project.matrix.com:8443) and login credentials (username, password). 
+oc login <openshift url> --username=<user-name> --password=<password> 
+Deployment of Minio on Openshift: 
+Create a new project or use existing project. 
+new project: oc new-project <project-name>  
+(optional) existing project: oc project <project-name>  
+Launch the application using the following command. 
+Note: <access-key>, <secret-key> are login credentials which will be used to login to minio console. 
+Access key of minimum 3 characters in length. 
+Secret key of minimum 8 characters in length. 	
+oc new-app icereed/openshift-minio@sha256:0b1f54ec5a05e892ea676acb61932807a83669cb16cc840e9f11b32d66a18bbc -e MINIO_ACCESS_KEY="<access-key>" -e MINIO_SECRET_KEY="<secret-key>" --name=<app-name> -n <project-name> 
+Perform the following steps to change the strategy from default(rolling) to recreate, remove existing volume and add new volume. 
+ oc get dc -n <project-name> 
+ Note: get <deploymentconfig-name> from above command output. 
+ oc patch dc/<deploymentconfig-name> --patch '{"spec":{"strategy":{"type":"Recreate"}}}' -n <project-name> 
+ oc volume dc/<deploymentconfig-name> --remove --name=<app-name>-volume-2 -n <project-name>
+Note: <storage-size> is the size of volume for object storage, eg:100G.
+oc volumes dc/<deploymentconfig-name> --add --name=<volume-name> --type=persistentVolumeClaim --claim-size=<storage-size> --mount-path="/opt/minio/data" -n <project-name> 
+create the route using following commands: 
+oc get svc -n <project-name> 
+Note: get <service-name> from above command output. 
+oc expose service <service-name> -n <project-name> 
+Use below command to get route or login to Openshift through browser, navigate to project created for minio deployment and try to access route.  
+oc get route
+Add the route in etc/hosts file against haproxy ip, try to access route and login to Minio using access key and secret key.
+
+
+ Gitlab Deployment on Openshift
+Follow below steps for Gitlab deployment on Openshift:
+
+Open openshift UI,  create new project, Click on "add to project " and go to “Deploy Image", select “Image Name” and give the following image “docker.io/gitlab/gitlab-ce” and click on search.
+
+
+
+
+If Gitlab-ce pod goes to crashloop back off error due to permission denied, Execute the next step commands.
+
+
+
+
+Login to openshift master node and add root permissions to the gitlab-ce deployment
+ 
+oc create serviceaccount useroot -n <project-name>
+
+oc adm policy add-scc-to-user anyuid -z useroot -n <project-name>
+
+oc get dc -n <project-name>
+
+oc patch dc/<gitlab-ce deployment name> --patch '{"spec":{"template":{"spec":{"serviceAccountName": "useroot"}}}}'  -n <project-name>
+
+Persistent Volume Creation:
+In openshift UI open the created project and go to “deplyoments” open the deplyoment click on “actions>edit” and change the deployment strategy to “recreate”, a pop-up appears click on “yes” and click on “save”.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Now go to ”Storage”, Click on “create” ,
+create 3 volumes with 20 GB storage each with the following details as given in the below image
+
+Login to master node and run the following commands:
+--> oc get pods
+--> oc describe pod <pod-name>
+--> oc get dc
+--> oc volume dc/<deployment-name> --add --overwrite --name=<volume-name> --type=persistentVolumeClaim --claim-name=<created vol-name>
+
+Overwrite the volumes for all 3 volumes.
+
+Note: Get deployment name and volume name from the first two commands
+Example:
+oc volume dc/gitlab-ce --add --overwrite --name=gitlab-ce-1 --type=persistentVolumeClaim --claim-name=vol1
+
+
+Route Creation:
+
+Openshift UI:
+
+Go to Openshift UI, open the project go to "Applications>Routes" and click on "create route", Provide the name, and select target port to 80 – 80.
+
+
+Once route for gitlab service has been created, add the below environment variable for that deployment(gitlab).
+Process: Go to deployments select gitlab deployment, in actions select "edit" and add the below variable and value in the Environment tab.
+
+Variable ---> GITLAB_OMNIBUS_CONFIG 
+Value ---> hostname='<gitlab-route>';external_url "http://#{hostname}/" (http://#{hostname}/%27)  unless hostname.to_s == '';
+
+Once the pod is up and running, set the gitlab root password by accessing the GitLab route.
+
+Settings in Gitlab to allow Outbound requests:
+
+Below setting to be made in Gitlab with admin credentials:
+
+4.1. Click on Admin area icon as below
+
+2. Click on Settings  icon on left side panel, search for Outbound requests option then click on expand
+3. Enable Allow requests to the local network from hooks and services as below and click Save changes.
+
+ Nexus Deployment on Openshift
+Follow below steps for Nexus deployment on Openshift:
+Login into OpenShift UI console.
+Click on Create Project button.
+
+Fill up project details and click on Create button.
+
+Next add the Nexus v3.12.1 template yaml file to your project.
+Click on “Import YAML / JSON” tab and paste the content in attached template file on to the clipboard and Click on Create button.
+
+A prompt “Add Template” will be displayed on screen then click on Continue button.
+
+Configure Nexus container parameters as follows.
+Change “Sonatype Nexus service name” field to any name like eg: nexusv3121
+Set “Max Memory” field eg: 4Gi (for Nexus container with 4GB of RAM)
+Set “Volume Space for Nexus” field eg: 20Gi (for Nexus container with 20GB of Disk Space)
+Refer below screenshot for a sample parameter configuration.
+
+
+Click on Create button at the bottom of the page
+The next page will show status that “Application created”.
+
+Wait for a while till the status shows “Completed” as shown below
+
+
+Click on “Go to overview” tab to verify the project home.
+
+Access Nexus URL
+To access Nexus follow below steps
+Click on ApplicationsRoutes
+All routes accessible to Nexus will be displayed.
+
+Now copy the hostname as highlighted in below screenshot and add to local computer’s hosts file to access using browser. While adding the hostname in hosts file make sure it is mapped to proper haproxy address of OCP.
+Refer below screenshot 
+
+Now try to access the application using the url and login with default credentials of nexus. Click on “Sign in” button.
+
+Default Credentials:
+Username: admin
+Password: admin123
+
+Create user in nexus
+Click on settings icon 
+Click on Users option
+
+Click on “Create local user”
+
+Provide information in the mandatory fields and click on “Create local user” button.
+Refer screenshot below for sample configuration.
+
+
+Create Roles for new user.
+Click on “Roles” option
+
+Click on “Create role” dropdown and select Nexus Role
+
+Configuring role and adding privileges to the role as shown in below screenshot and click on “Create role”.
+
+
+Click on “Users” option again and click on new user name “matrix”. Assign new role to new user.
+Click on “Save” button. User updated successfully popup will be displayed on top right of the screen.
+
+Sign out from admin login and login using new user name and password
+
+
+To verify that user has enough permission to create repository
+Click on settings icon 
+
+Click on “Create repository” button
+
+Select any repository type
+Eg: maven2 (hosted)
+
+Configure new repository
+
+Click on “Create repository” button.
+New repository will be created.
+
+So it is verified that User has enough permission to create repositories.
+
+
+
+ Sonarqube Deployment on Openshift
+Follow below steps for Sonarqube deployment on Openshift:
+Login into OpenShift UI console.
+Click on Create Project button.
+
+Fill up project details and click on Create button.
+
+Click on “Deploy Image” tab.
+
+
+Select “Image Name” radio button and type “docker.io/sonarqube:7.1” in the search box and click on search button as shown in the below screenshot
+
+
+After clicking on search button sonarqube resources will be created as per the image as shown in the below screenshot.
+Click on “Create” button.
+
+The next page will show status that “Application created”.
+
+Wait for a while till the status shows “Completed” as shown below
+
+
+Click on “Go to overview” tab to verify the project home.
+
+
+Adding Root permissions to OCP service
+OCP services may require root privileges for applications. The root privileges can be implemented using “userroot” service in OCP.
+To add “useroot” privileges
+1) Login into any master node VM of OCP
+2) Select the project
+# oc project sonartest
+3) Create userroot service account
+# oc create serviceaccount useroot
+4) Add useroot policy
+# oc adm policy add-scc-to-user anyuid -z useroot
+5) Get the dc name
+# oc get dc
+6) Patch the useroot account using dc name
+# oc patch dc/<dcname> --patch '{"spec":{"template":{"spec":{"serviceAccountName": "useroot"}}}}'
+7) Refer screenshot below 
+
+
+Adding persistent storage to sonarqube
+Persistent storage will store the application data even if pod in OCP restarts/crashes
+Click on “Storage” option to create persistent storage
+
+Click on “Create Storage” button.
+Provide mandatory storage configuration details and click on “Create” button.
+Refer screenshot below for sample configuration.
+
+Storage will be displayed after creation.
+
+Now the storage should be added to the deployed image.
+Click on Applications Deployments
+
+Click on name of the deployment as shown in below screenshot
+
+Click on “Actions” dropdown and select “Add Storage” option.
+
+Select the storage the one which was created in previous step.
+Provide mount path details and make sure to add “Mount Path” as “/opt/sonarqube/conf” as mentioned in the screenshot below. 
+Click on “Add” button.
+
+The moment storage is added the pod will restart and will be created with new configuration (persistent storage).
+Wait for the pod to recreate
+
+Access the sonarqube UI
+Click on ApplicationsRoutes
+
+Click on “Create Route” button
+
+Provide name to the new route and click on “Create” button.
+
+After route is created it will be displayed.
+
+
+Now copy the hostname as highlighted in below screenshot and add to local computer’s hosts file to access using browser. While adding the hostname in hosts file make sure it is mapped to proper haproxy address of OCP.
+Now try to access the application using the url. 
+Sonarqube UI will be shown as in the below screenshot.
+
+
+Note:
+By default sonarqube uses “Embedded H2” type database.
+It is much better to integrate and use other databases like PostgreSQL or MariaDB.
+
+
+
+ APICurio with Postgres Installation on Openshift
+Prerequisites:
+Java 8+
+Maven 3.X
+Reference Link:
+https://www.digitalocean.com/community/tutorials/how-to-install-java-on-centos-and-fedora
+https://tecadmin.net/install-apache-maven-on-centos
+Postgres Installation:
+Follow below steps for Postgres deployment on Openshift:
+1. Create a project in openshift
+2. click on Add-to-project and select Deploy Image option
+3. Go to “Deploy Image” and In image stream tag provide the details 
+openshift, postgres, 9.5 tag and click on “create”.
+Granting Permissions to Pod:
+If there is a error in Pod, displaying permission denied execute these statements to grant permissions to pod.
+oc create serviceaccount useroot -n <project-name>
+oc adm policy add-scc-to-user anyuid -z useroot -n <project-name>
+oc patch dc/<depname> --patch '{"spec":{"template":{"spec":{"serviceAccountName": "useroot"}}}}' -n <project-name>
+Making Postgres Persistent:
+Create a storage in that project with minimum of 10Gi.
+oc volume dc/<depname> --add --overwrite --name=<depname>-1 --type=persistentVolumeClaim –claim-name=<name of the volume created>
+oc volume dc/<depname> --add --overwrite --name=<depname>-1 --mount-path=/var/lib/postgresql
+
+
+Installation:
+In openshift master node clone the code from Gitlab.
+git clone http://10.129.194.153/sarvani/apicurio-studio-pro.git
+Go to “apicurio-studio-pro” folder and build it.
+cd apicurio-studio
+mvn clean install
+Go to this “distro/quickstart/target” path and delete “apicurio-studio-0.2.15-SNAPSHOT” folder and unzip the “apicurio-studio-0.2.15-SNAPSHOT-quickstart.zip” folder.
+cd distro/quickstart/target
+sudo rm -r apicurio-studio-0.2.15-SNAPSHOT
+unzip apicurio-studio-0.2.15-SNAPSHOT-quickstart.zip
+Open the following file “apicurio-studio-0.2.15-SNAPSHOT/standalone/configuration/standalone-apicurio.xml” and make the following changes:
+--> vi apicurio-studio-0.2.15-SNAPSHOT/standalone/configuration/standalone-apicurio.xml
+In <system-properties> change the following values:
+<property name="apicurio.kc.auth.rootUrl" value="${env.keycloak}"/>
+<property name="apicurio.kc.auth.realm" value="${env.realm}"/>
+<property name="apicurio.hub.storage.jdbc.type" value="${env.dbtype}"/>
+<property name="http.proxyHost" value="${env.http}"/>
+<property name="http.proxyPort" value="${env.httpport}"/>
+<property name="https.proxyHost" value="${env.https}"/>
+<property name="https.proxyPort" value="${env.httpsport}"/>
+<property name="http.nonProxyHosts" value="${env.noproxy}"/>
+<property name="apicurio.hub.gitlab.api" value="${env.gitlaburl}"/>
+In <datasource> make the following changes:
+<datasource jndi-name="java:jboss/datasources/ApicurioDS" pool-name="ApicurioDS" enabled="true" use-java-context="true">
+<connection-url>jdbc:postgresql://${env.postgresip}:${env.postgresport}/${env.DB_NAME}</connection-url>
+<driver>postgresql-42.2.5.jar</driver>
+<security>
+<user-name>${env.DB_USER}</user-name>
+<password>${env.DB_PASS}</password>
+</security>
+</datasource>
+In the same file search for “http-listerner” and change the value of proxy-address-forwarding to “false”:
+<http-listener name="default" socket-binding="http" proxy-address-forwarding="false" redirect-socket="https" enable-http2="true"/>
+Zip the “apicurio-studio-0.2.15-SNAPSHOT” folder.
+zip -r apicurio-studio-0.2.15-SNAPSHOT.zip apicurio-studio-0.2.15-SNAPSHOT
+Create a docker file, and copy the content below.
+-->Vi Dockerfile
+FROM centos:7
+RUN yum install -y \
+java-1.8.0-openjdk-headless \
+unzip \
+wget \
+&& yum clean all
+WORKDIR /opt/apicurio-studio
+RUN groupadd -r apicurio -g 1001 \
+&& useradd -u 1001 -r -g apicurio -d /opt/apicurio-studio/ -s /sbin/nologin -c "Docker image user" apicurio \
+&& chown -R apicurio:apicurio /opt/apicurio-studio/
+ADD apicurio-studio-0.2.15-SNAPSHOT.zip /opt/apicurio-studio/.
+USER 1001
+RUN unzip /opt/apicurio-studio/apicurio-studio-0.2.15-SNAPSHOT.zip \
+&& rm /opt/apicurio-studio/apicurio-studio-0.2.15-SNAPSHOT.zip \
+&& mv /opt/apicurio-studio/apicurio-studio-0.2.15-SNAPSHOT /opt/apicurio-studio/wildfly \
+&& chmod 777 -R /opt/apicurio-studio/wildfly \
+&& find /opt/ -name '*' \
+&& chmod 777 /opt/apicurio-studio/wildfly/bin/standalone.sh \
+&& cd /opt/apicurio-studio/wildfly/standalone/deployments \
+&& wget https://jdbc.postgresql.org/download/postgresql-42.2.5.jar
+EXPOSE 8080
+ENV keycloak=<default-keycloak-url> \
+realm=<default-keycloak-realm> \
+http=<default-value> \
+httpport=<default-value> \
+https=<default-value>\
+httpsport=<default-value>\
+noproxy=<default-gitlab-url> \
+gitlaburl=<default-gitlab-url> \
+DB_NAME=postgres \
+DB_USER=postgres \
+DB_PASS=postgres \
+postgresip=<default-postgres-service-name/ip> \
+postgresport=<default-postgres-port> \
+dbtype=postgresql9
+ENTRYPOINT ["/opt/apicurio-studio/wildfly/bin/standalone.sh"]
+CMD ["-c", "standalone-apicurio.xml","-b", "0.0.0.0"]
+Copy the “apicurio-studio-0.2.15-SNAPSHOT.zip” to the same path as that of “Dockerfile”.
+Build the dockerfile and push it to repository.
+sudo docker build -t apicurio:latest .
+sudo docker login -u matrix -p <password> docker-registry.default.svc:500
+sudo docker tag apicurio:latest docker-registry.default.svc:5000/openshift/apicurio:latest
+sudo docker push docker-registry.default.svc:5000/openshift/apicurio:latest
+Open Openshift UI, click on “create project” and provide the name, Or go to the project in which postgres service is deployed and follow the below steps.
+Go to “Deploy Image” and In image stream tag provide the details 
+openshift, apicurio, latest as shown in the below image and click on “create”.
+Go to "Applications>Routes" and click on "create route", Provide the name, and select target port to 80 – 80.
+Keycloak Integration:
+Open keycloak admin console, open “Matrix” Realm, go to “clients” , click on create.
+
+Provide “client-id” as “apicurio-api” and click on “save”.
+Create another client and provide “client-id” as “apicurio-studio” and click on “save”.
+
+
+
+
+
+
+
+
+
+
+
+Open “apicurio-studio” client and provide the following details and click on “save”:
+Root URL: <apicurio-route>
+Valid Redirected URIs: <apicurio-route>/*
+Base URL: <apicurio-route>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ EFK Deployment on Openshift
+Follow below steps for EFK deployment on Openshift:
+Introduction:
+EFK stack is used to aggregate logs for a range of OpenShift Container Platform services. Once deployed in a cluster, the EFK stack aggregates logs from all nodes and projects into Elasticsearch, and provides a Kibana UI to view any logs. In order to view logs from outside the cluster, Openshift supports the use of MUX feature. 
+Note: The mux is a Technology Preview feature only. Technology Preview features are not supported with Red Hat production service level agreements (SLAs), might not be functionally complete. These features provide early access to upcoming product features, enabling customers to test functionality.
+The EFK stack is comprised of:
+Elasticsearch (ES): An object store where all logs are stored.
+Fluentd: Gathers logs from nodes and feeds them to Elasticsearch.
+Kibana: A web UI for Elasticsearch
+
+EFK installation procedure
+Pre-deployment Configuration
+
+1. An Ansible playbook is available to deploy and upgrade aggregated logging. Parameters are added to the Ansible inventory file to configure various areas of the EFK stack.
+2. Ensure that you have the necessary storage for Elasticsearch. Note that each Elasticsearch replica requires its own storage volume.
+3. Choose a project. We use the default project “logging”. The Ansible playbook creates the project for you if it does not already exist. You will only need to create a project if you want to specify a node-selector on it. Otherwise, the openshift-logging role will create a project.
+3.1.  # deleting existing project
+oc delete project logging
+3.2. # create a project for logging
+oc new-project logging
+3.3. # specify node selector
+oc edit project logging 
+  openshift.io/node-selector: ""
+4. On the bastion instance add the following lines to the /etc/ansible/hosts file below the registry and above the [masters] entry.
+openshift_hosted_logging_deploy=true
+openshift_logging_es_pvc_dynamic=true
+openshift_logging_es_pvc_size=100Gi
+openshift_logging_es_cluster_size=3
+openshift_logging_es_nodeselector={"role":"app"}
+openshift_logging_kibana_nodeselector={"role":"app"}
+openshift_logging_curator_nodeselector={"role":"app"}
+
+
+Deploying the EFK Stack
+The EFK stack is deployed using an Ansible playbook to the EFK components. Run the playbook from the default OpenShift Ansible location (in bastion node) using the inventory file. Here, parameters are added to the ansible execution to use the MUX feature.
+
+ansible-playbook -vvv -e openshift_logging_es_allow_external=true -e openshift_logging_es_hostname=<Elastic search route URL> -e openshift_logging_use_mux=true -e openshift_logging_mux_allow_external=true -e openshift_logging_use_mux_client=true -e openshift_logging_mux_hostname=<Mux route URL>  -e openshift_logging_mux_client_mode=maximal -e openshift_logging_mux_namespaces:['externalvmlogs'] /usr/share/ansible/openshift-ansible/playbooks/byo/openshift-cluster/openshift-logging.yml
+
+Example:
+ansible-playbook -vvv -e openshift_logging_es_allow_external=true -e openshift_logging_es_hostname=es.haproxy.project.matrix.com -e openshift_logging_use_mux=true -e openshift_logging_mux_allow_external=true -e openshift_logging_use_mux_client=true -e openshift_logging_mux_hostname=mux.haproxy.project.matrix.com -e openshift_logging_mux_client_mode=maximal -e openshift_logging_mux_namespaces:['externalvmlogs'] /usr/share/ansible/openshift-ansible/playbooks/byo/openshift-cluster/openshift-logging.yml
+
+Validation
+1. To verify the deployment from CLI, use the following command
+ oc get pods -n logging
+2. To view the kibana UI, access the route from the project “logging”.
+Example :
+ https://kibana.haproxy.project.matrix.com​ 
+Note:
+The logging route redirects to a master ip before authenticating. In order to proceed, the ip must be added to the no proxy section of the browser.
+3. To create the route for mux, go to Openshift UI -> logging -> Routes -> Create Route. Enter hostname as <mux-hostname> (Eg : mux.haproxy.project.matrix.com) and select service as “logging-mux” and click on Create button.
+4. For VM logs to be sent to mux, a mux service needs to be created with an external ip.
+oc expose dc logging-mux --port=24284 --target-port=mux-forward --name=loggingmuxextip --external-ip=<internal-network-ip-of-mux-node> 
+Eg:
+oc expose dc logging-mux --port=24284 --target-port=mux-forward --name=loggingmuxextip --external-ip=192.168.1.14 
+Note:
+The internal network ip can be obtained by checking the node on which the mux pod is deployed. Openshift dashboard -> logging project -> mux pod -> Node(under details section). The node’s corresponding internal ip can be obtained from Openstack.
+5. Logs can be filtered in Kibana UI by applying appropriate filters available such as message, hostname, namespace etc.
+
+Pre-requisites
+1. Create a project in Openshift in order to view VM logs in Kibana UI under that namespace.
+Eg : Go to Openshift UI -> Create Project -> Give name as “JiraVMlogs” -> Create.
+2. Get cert file for mux from openshift logging project
+oc project logging
+oc get secret logging-mux --template='{{index .data "ca"}}' | base64 -d > mux-ca.crt
+3. Get mux shared key file from logging project
+oc get secret logging-mux --template='{{index .data "shared_key"}}' | \
+  base64 -d > mux-shared-key
+4. Copy the cert file and shared key file to the VM where fluentd has to be installed and configured, using the VM’s floating ip. These files are used to send logs to mux from the VM, as shown in section 3.3, point 2.
+Example : 
+scp –i <pem-file> mux-shared-key cloud-user@<VM-ip>:/home/cloud-user
+
+Install fluentd in VM
+1. # install td-agent
+curl -L https://toolbelt.treasuredata.com/sh/install-redhat-td-agent2.sh | sh 
+2. # configure td-agent with root user. In the file /etc/rc.d/init.d/td-agent change user and group to "root" instead of td-agent.
+   TD_AGENT_USER=root
+   TD_AGENT_GROUP=root
+3. # start td-agent with root user
+sudo systemctl daemon-reload
+sudo systemctl start td-agent
+4. # check the status of td-agent service
+sudo systemctl status td-agent
+5. Install fluentd secure-forward-plugin
+/opt/td-agent/embedded/bin/fluent-gem install fluent-plugin-secure-forward
+
+Configure td-agent
+Make the following changes in the conf file, /etc/td-agent/td-agent.conf for the td-agent to send logs to the namespace present in Openshift using the mux feature.
+1. Add the following configuration using the source tag, in order to specify the log path present in the VM. We can specify multiple log file paths by using multiple source tag sections.
+<source>
+  @type tail
+  @log_level debug
+
+  path <log-file-absolute-path>
+  pos_file /var/log/td-agent/buffer/raw.<log-file-name>.pos
+
+  format none
+
+  tag project.<project-name>.<identifier >
+</source>
+
+Example :
+<source>
+  @type tail
+  @log_level debug
+
+  path /home/jirauser/jirasoftware-home/log/atlassian-jira.log
+  pos_file /var/log/td-agent/buffer/raw.atlassian-jira.log.pos
+
+  format none
+
+  tag project.jiravmlogs.atlassianjiralog
+</source>
+2. Add the match filter section using the match tag and secure_forward type to send logs to mux.
+<match project.<project-name>.*>
+  @type secure_forward
+  self_hostname forwarding-${hostname}
+  ca_cert_path <cert-file-absolute-path>
+  secure yes
+  enable_strict_verification no
+  shared_key "#{File.open('<mux-shared-key-file-path) do |f| f.readline end.rstrip}"
+  <server>
+    host <mux-host-name>
+    hostlabel <mux-host-label>
+    port <mux-service-port>
+  </server>
+</match>
+
+Example ;
+<match project.jiravmlogs.*>
+  @type secure_forward
+  self_hostname forwarding-${hostname}
+  ca_cert_path /home/cloud-user/mux-ca.crt
+  secure yes
+  enable_strict_verification no
+  shared_key "#{File.open('/home/cloud-user/mux-shared-key') do |f| f.readline end.rstrip}"
+  <server>
+    host mux.haproxy.project.matrix.com
+    hostlabel mux.haproxy.project.matrix.com
+    port 24284
+  </server>
+</match>
+3. Add mux-logging service node’s floating ip in /etc/hosts of the VM.
+Example:
+<floating ip of logging-mux-svc> mux.haproxy.project.matrix.com
+Note:
+The floating ip of the mux svc can be obtained by checking the node on which the mux pod is deployed. Openshift dashboard -> logging project -> mux pod -> Node(under details section). The node’s corresponding floating ip can be obtained from Openstack.
+4. Restart td-agent service
+sudo systemctl restart td-agent
+
+td-agent.conf file for SSO
+
+td-agent.conf file for Confluence
+
+td-agent.conf file for GIT
+
+td-agent.conf file for JIRA
+
+
+Validating VM logs
+In order to view VM logs in Kibana UI, go to Kibana UI route and filter the logs by specifying the project name to which the logs are mapped.
+
+Custom curator configuration
+1. To provide custom configuration to curator, edit the configmap of curator in the logging project.
+a. From Openshift UI, go to logging project, select logging-curator under the config maps section and edit the yaml file.
+b. Otherwise, execute the following commands from CLI.
+oc project logging
+oc edit configmap/logging-curator
+2. We can configure the curator to modify 
+a. The default number of days after which logs has to be deleted for each project.
+b. To keep operation logs for a different duration
+c. To configure the number of days or months after which logs for specific projects have to be deleted.
+3. Consider the following yaml file as an example in order to configure the curator.
+config.yaml :
+# Logging example curator config file
+
+# uncomment and use this to override the defaults from env vars
+.defaults:
+  delete:
+    days: 15
+  runhour: 0
+  runminute: 0
+
+# to keep ops logs for a different duration:
+.operations:
+  delete:
+    weeks: 2
+
+# example for a normal project
+monitoring:
+  delete:
+    days: 7
+jenkins:
+  delete:
+    days: 1
+a. After making any changes to the config yaml file, the curator has to be redeployed.
+oc rollout latest dc/logging-curator
+
+Cleanup
+To cleanup everything that is generated with the EFK deployment, use the following ansible-playbook.
+ansible-playbook -vvv -e openshift_logging_install_logging=false /usr/share/ansible/openshift-ansible/playbooks/byo/openshift-cluster/openshift-logging.yml 
+References:
+https://docs.openshift.com/container-platform/3.6/install_config/aggregate_logging.html
+https://github.com/openshift/origin-aggregated-logging/blob/master/docs/mux-logging-service.md
+
+TCS Tools:
+Operation Catalog Tool
+Prerequisites:
+Keycloak(SSO), Postgres, Openshift  needs to be installed before setting up the Operation catalog.
+ Step1. Source code Details
+	Operation Catalog source code is available in the below git path:
+	Git URL: http://10.129.194.153/chandrag/digimopcatalog.git
+	Branch to checkout: main
+
+ Step 2. Name Space Creation at OCP
+	Namespace: opeartioncatalog
+
+ Step 3. Below CICD procedure to be followed for Cataalog tool Jenkins job creation
+
+
+
+ Step 4. Install the postgres container, then execute the script from below location for schema creation, tables creation.
+	http://10.129.194.153/chandrag/digimopcatalog/blob/master/InstallationDocs/Schema.sql
+
+
+ Step 5. Generating token for Accessing Openshift REST API. Login to open shit platform and execute the following steps.
+
+Go to project context
+oc project <project-name>
+
+Create a file operationcatalog.json with content below
+
+	{
+	  "apiVersion": "v1",
+	  "kind": "ServiceAccount",
+	  "metadata": {
+		"name": "<serviceaccount-name"
+	  }
+	}
+
+Execute the following
+
+oc create -f < serviceaccount-name>.json
+
+Add sufficient privileges
+
+oadm policy add-cluster-role-to-user cluster-admin system:serviceaccount:<namespace-name>:<serviceaccount-name>
+
+Describe the created service account and fetch the Token (highlighted)
+Example:
+oc describe sa operationcatalog
+
+Name:           operationcatalog
+Namespace:      operationcatalog
+Labels:         <none>
+Annotations:    <none>
+
+Tokens:                 operationcatalog-token-jcg3r
+                        operationcatalog-token-sc381
+
+Image pull secrets:     operationcatalog-dockercfg-zhp2c
+
+Mountable secrets:      operationcatalog-token-sc381
+                        operationcatalog-dockercfg-zhp2c
+Describe the Secret and fetch the token from output(highlighted).
+Example:
+oc describe secret <operationcatalog-token-jcg3r>
+Name:           operationcatalog-token-jcg3r
+Namespace:      operationcatalog
+Labels:         <none>
+Annotations:    kubernetes.io/created-by=openshift.io/create-dockercfg-secrets
+                kubernetes.io/service-account.name=operationcatalog
+                kubernetes.io/service-account.uid=7ce324a3-9ba1-11e8-b9b3-fa163e4dc5cd
+
+Type:   kubernetes.io/service-account-token
+
+Data
+====
+service-ca.crt: 2186 bytes
+token:          eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJvcGVyYXRpb25jYXRhbG9nIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6Im9wZXJhdGlvbmNhdGFsb2ctdG9rZW4tamNnM3IiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoib3BlcmF0aW9uY2F0YWxvZyIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6IjdjZTMyNGEzLTliYTEtMTFlOC1iOWIzLWZhMTYzZTRkYzVjZCIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpvcGVyYXRpb25jYXRhbG9nOm9wZXJhdGlvbmNhdGFsb2cifQ.aro9W-qF3YuATWG4cucQA7kcaIW5pNKw7Whcj0uqw-3RR-GENwZELBYGFuOVSW2zR9EZiEHVYZeSNrBtZ9dAbn9QgD1P4Ijxz5lc_BJhF5n-pQURdIc0oV3thWggvG1NJ5YrfHqavfoNzvF1ekr6hv4kcnegTbaCwqf26E_84t1fvmNUr7WO9q65TQIa0k14lSP7aPTXkn9FxQhAajk_cUijTHHXQPoRKBjICG8gm6qjnTZd7xJ8tRlDV-C9J-Xvl4vnZNMSNadTzmMRkUoVs-Kw6AButhE5XiaMKd4rPg1r86C9nesUAcCtKGi8wzwqF9ddakazC6JFoZPjm-KbLw
+ca.crt:         1070 bytes
+namespace:      16 bytes
+
+
+
+ Step 6.  Keycloak Configuration for Operation Catalog application.
+
+Below are the steps to add catalog application as a client in Keycloak server.
+Login to Admin Console of Keycloak server with admin credentials
+
+Select the realm where all the tools of Matrix are configured.
+
+Navigate to Clients → Create.
+create a client for Operationcatalog with below details.
+
+Client Id : catalog
+Valid Redirect URL : url to access application(deployed in openshift) and add '/*' at the end of url
+
+
+
+Step 7. Create a Keycloak client and user for fetching accestoken from keycloak.
+
+Login to Admin Console of Keycloak server with admin credentials
+
+Navigate to the realm where all the tools of Matrix are configured
+
+Navigate to Clients → Create.
+Create a client for fetching accestoken from keycloak using the below details.
+
+Client Id : clientTokenAccess
+Valid Redirect URL : *
+
+
+
+Navigate to users → Add user.
+
+Create an user name “token_access_user” and hit save
+
+
+
+once the user is created successfully, Navigate to credential section and set the password as “token_access_user”. Set the 'Temporary' option to off and click on 'Reset Password'.
+
+
+
+
+
+
+
+
+
+
+
+
+ Step 8. Generate GIT admin access token
+
+Login to GIT Lab server used by Project-explorer as root user.
+
+Navigate to Setttings → Access Tokens
+
+
+update the fields as shown bellow and click create Personal token
+Name: catalog
+Expires at: Select a date till which the token is valid
+Select all the scopes
+
+
+ copy the generated Access toke and save it somewhere.(it can be viewed only once)
+
+
+	
+
+ Step 9. Setting config maps and Environment variables
+
+	Update the following Environment variables in configuration Map once the application is deployed by Jenkins pipeline.
+
+Login to Openshift UI and select the project operationcatalog
+
+
+
+
+
+Go to Resources → Config Maps
+
+
+Click on 'Create Config Map' from the screen.
+
+
+Add the entries from table(Config Map Table) one by one and then click Add Item.
+
+
+
+
+
+Config Map Table
+
+KEY
+VALUE
+CATALOG_BASE_URL
+http://<operationcatalog-operationcatalog.haproxy.project.matrix.com>
+POSTGRESURL
+jdbc:postgresql://postgresql.postgres.svc:5432/sampledb
+POSTGRESUSERNAME
+userTCV
+POSTGRESPASSWORD
+iWcx4chFnVaajaOn
+WFM_NOTIFY_DIGIMOP_UPDATE
+http://<workflowmanager-workflowmanager.haproxy.project.matrix.com>/api/workflow/v1/parser/apiParseAndSave
+WFM_GET_ALL_DIGIMOPS_FORMAT
+http://<workflowmanager-workflowmanager.haproxy.project.matrix.com>/api/workflow/v1/inputtooldata/getDigimopFormat?operationName={operationName}&projectId={projectId}
+PE_BASE_URL
+http://<projectexplorer-projectexplorer.haproxy.project.matrix.com>
+PE_GET_ROLE_PROJ_ACNT
+http://<projectexplorer-projectexplorer.haproxy.project.matrix.com>/getEnrolledProjects
+PE_GET_ROLE_ACNT
+http://<projectexplorer-projectexplorer.haproxy.project.matrix.com>/getUserAdminAndAccountLevelRole
+PE_GET_MAILING_LIST
+http://<projectexplorer-projectexplorer.haproxy.project.matrix.com>/getProjectUserMailIds?projectId={projectId}
+SMTP_HOST
+<dhn-mailrelay.emea.nsn-intra.net>
+SMTP_FROM
+<noreply.matrixadmin@nokia.com>
+CRON_STRING
+0 0/5 * * * ?
+OPENSHIFTAPIURL
+https://<haproxy.project.matrix.com:8443>/api/v1/
+OPENSHIFTTOKEN
+Token generated from Step 5
+GIT_ACCESS_TOKEN
+<MigTs6Fh1dGFDvWH3wXv> Token generated in step 8
+KEYCLOAK_SERVER_URL
+http://<10.129.194.177:8089>/auth
+KEYCLOAK_REALM
+Matrix
+KEYCLOAK_RESOURCE
+catalog
+KEYCLOAK_USER_NAME
+admin
+KEYCLOAK_USER_PASSWORD
+admin
+KEYCLOAK_USER
+http://<10.129.194.12:8089>/auth/admin/realms/<Matrix>/users?search=
+KEYCLOAK_ACCESSTOKEN
+http://<10.129.194.12:8089>/auth/realms/master/protocol/openid-connect/token
+KEYCLOAK_CLIENT
+<clientTokenAccess> client created in Step 7
+KEYCLOAK_CLIENT_PWD
+Password set for user created in Step 7
+KEYCLOAK_CLIENT_USER
+User created in Step 7
+
+
+Go to Application → Deployments → Select Deployed instance → Environment → “Add Environment Variable Using a Config Map or Secret”
+Add entries for Name(same as KEY from table), Value, Key. Repeat the process for all the entries made in Config Map.
+
+
+
+Click on Deploy button after adding all the Environment variables successfully.
+
+
+ Step 10. Creating Jira-WebHook
+
+Login to jira instance as Admin
+Navigate to Settings → System → WebHooks
+Click on  → create a WebHook
+update the details as below:
+
+
+
+
+Name →  <HookName>
+URL → http://<operationcatalog-operationcatalog.haproxy.project.matrix.com>/jira/workflow/v1/updateJiraUrl/${project.id}/${issue.id}/${issue.key}
+Evnets → issuetype = Task
+
+Select all Update events for issue as shown below.
+
+
+
+
+
+Hit Save and WebHook is created.
+Login to Jira backend(terminal) as root user
+Add a host entry for <operationcatalog-operationcatalog.haproxy.project.matrix.com> in /etc/hosts file
+Save the file
+
+ Jenkins Job
+
+Create a Jenkins pipeline
+Make the pipeline paremeterized and and add the following parameters as shown in below table.
+Update the pipeline script from below link.
+http://10.129.194.153/chandrag/digimopcatalog/blob/master/InstallationDocs/pipeline.groovy
+
+Parameter Type
+Name
+Default Value
+String
+namespace_name
+operationcatalog
+String
+git_url
+http://10.129.194.153/chandrag/digimopcatalog.git
+String
+appname
+operationcatalog
+String
+port
+8000
+String
+version
+latest
+String
+Openshift_url
+https://haproxy.project.stagingmatrix.com:8443/
+String
+ocp_token
+Token generated in step 5
+
+
+
+
+
+
+
+
+
+
+    
+ CICD
+Introduction
+CICD is implemented to enable and achieve Auto DevOps within MATRIX.
+Benefits
+Automatic CI-CD template creation based on User selection while creating project.
+Supports CI-CD for Java applications, Python applications, Shell Scripts, Ansible Scripts.
+Currently supports CD to OCP v3.6.
+Scope and Use Cases:
+Seed Job will be created in Build Jenkins to generate CI-CD templates.
+
+Pre-requisites:
+OpenShift is UP and running.
+Jenkins v2.130 docker image is in place to pull from OpenShift image registry.
+Jenkins v2.130 openshift based docker image with following plugins:
+SSH Slaves: v1.26
+Email Extension: v2.62
+Role-based Authorization Strategy: v2.8.1
+GitLab Plugin: v1.5.9
+Discard Old Build plugin: v1.05
+Persistent Build Queue Plugin: v0.1.1
+Robot Framework: v1.6.4
+Workspace Cleanup Plugin: v0.34
+Xvfb plugin: v1.1.3
+Authorize Project: v1.3.0
+Keycloak Authentication Plugin: v2.2.0
+
+
+
+
+Creating Jenkins v2.130 Docker image
+We can either create a new Jenkins v2.130 image using “Dockerfile” or Push an existing Jenkins v2.130 image to docker registry.
+To create a Jenkins v2.130 image 
+1) Login into any master node VM of OpenShift.
+2) Check if docker service is UP and running.
+# sudo systemctl status docker
+
+3) Create a directory in the VM.
+# mkdir jenkins-ocp-image-files
+# cd jenkins-ocp-image-files
+
+4) Copy attached file below to the above created directory in VM.
+[Use “scp” ot “ftp” to copy the file if using linux or use “winscp” if using windows.]
+
+Extract the file 
+# sudo unzip jenkins2130-docker-img-setup-files.zip
+
+Set permissions to the directory
+# cd ..
+# sudo chmod –R 777 jenkins-ocp-image-files/
+# cd jenkins-ocp-image-files/
+# ll
+
+
+5) Run the docker file to create Jenkins v2.130 image.
+# sudo docker build -t jenkins:2.130 . [Make sure not to ignore the (dot) at the end of the command]
+
+
+
+The above screenshot shows that jenkins v2.130 docker image is successfully created.
+
+Verify docker image creation using following command.
+# sudo docker images | grep jenkins
+
+6) Get the token to login into docker registry
+# oc login -u test
+
+
+# oc whoami -t
+
+The highlighted part in the above screenshot is the token used to login into docker registry.
+7) Login into docker registry 
+# sudo docker login -u test -p <use token generated in above step> docker-registry.default.svc.cluster.local:5000
+
+Now tag the image before pushing it to docker registry
+# sudo docker tag jenkins:2.130 docker-registry.default.svc:5000/openshift/jenkinsstaging:2.130
+[anyname can be given instead of “jenkinsstaging”]
+
+Then push the image to docker registry
+# sudo docker push docker-registry.default.svc:5000/openshift/jenkinsstaging:2.130
+Creating Build Jenkins in OCP.
+Jenkins v2.130 can be launched in OCP using a template.
+Login into OpenShift console.
+Click on Create Project button.
+
+Fill up project details and click on Create button.
+Next add the Jenkins v2.130 template json file to your project.
+Click on “Import YAML / JSON” tab and paste the content in attached template file on to the clipboard. Click on Create button.
+
+Note:
+Before importing the template refer the image of Jenkins from the OpenShift registry.
+Open the attached template file and search for the following line
+"docker-registry.default.svc:5000/openshift/jenkins2130u@sha256:617d4936cb71fa5e9274e6d89ee2c893bcbaaea5eb114fbafd4ba766c6b1f94c"
+Replace this line with following line 
+“docker-registry.default.svc:5000/openshift/jenkinsstaging”
+Also search for following content inside template
+	{
+            "description": "Name of the ImageStreamTag to be used for the Jenkins image.",
+            "displayName": "Jenkins ImageStreamTag",
+            "name": "JENKINS_IMAGE_STREAM_TAG",
+            "value": "jenkins2130u:2.130"
+        	},
+
+Replace "value": "jenkins2130u:2.130" with “value”: “jenkinsstaging:2.130”
+After replacing the line import the template.
+
+A prompt “Add Template” will be displayed on screen then click on Continue button.
+
+Configure Jenkins container parameters as follows.
+Change “Jenkins Service Name” field to any name like eg: cicdbuild
+Set “Memory Limit” field eg: 2048Mi (for Jenkins container with 2GB of RAM)
+Set “Volume Capacity” field eg: 10Gi (for Jenkins container with 10GB of Disk Space)
+
+Refer below screenshot for a sample parameter configuration.
+
+Click on Create button at the bottom of the page
+
+A popup will be displayed to grant permissions to the project then click on “Create Anyway” button.
+
+The next page will show status that “Application created”.
+
+Wait for a while till the status shows “Completed” as shown below
+
+
+Click on “Go to overview” tab to verify the project home.
+
+
+Access Jenkins URL
+To access Jenkins follow below steps
+Click on ApplicationsRoutes
+All routes accessible to Jenkins will be displayed.
+
+
+Now copy the hostname as highlighted in below screenshot and add to local computer’s hosts file to access using browser. While adding the hostname in hosts file make sure it is mapped to proper haproxy VM IP address of OCP.
+Refer below screenshot 
+
+
+
+Now try to access the application using the url and login with openshift credentials. Click on “Log in with OpenShift” button.
+
+Click on "openldap_auth" option in next page
+
+Provide credentials and click on “Log In” button in next page to login into Jenkins.
+Username: matrix
+Password: matrix
+
+In next page “Authorize Access” click on “Allow selected permissions” button
+
+Verify the Jenkins version at the bottom of the page.
+
+
+
+
+
+
+
+
+
+
+
+KeyCloak configuration for Jenkins
+Steps to be followed for creating client in Keycloak:
+1. Login into Keycloak with valid credentials.
+2. Select the realm 'Matrix' 
+3. Click on "Clients" on the left hand side as shown in the screenshot below
+
+4. Click on the "Create" button
+5. Provide details to create a client for build Jenkins and click on “Save” button.
+
+After saving you will be redirected to page as shown below
+6. Select the "Access Type" as "public". 
+In the “Root URL” enter the build Jenkins URL.
+In the "Valid Redirect URIs" enter the build Jenkins URL and add "/*" at the end of the URL. 
+In the “Admin URL” enter the build Jenkins URL.
+Refer screenshot below for sample configuration
+
+7. Click on “Installation” tab and select “Format Option” as “Keycloak OIDC JSON”.
+JSON content for the client id will be generated in text area. (as shown in the screenshot below)
+
+Save this json content in a file for later use in Jenkins configuration while integrating keycloak with Jenkins.
+
+Jenkins integration with KeyCloak
+To integrate Build Jenkins with KeyCloak follow below steps
+1) Login into Jenkins
+2) Navigate to “Manage and Assign Roles” option in “Manage Jenkins”
+
+3) Click on “Assign Roles” option
+
+4) Add any nokia ldap user and assign “admin” privileges (Check “admin” option against user) to the user.
+
+
+Click on “Save” button.
+5) Configure keycloak settings in Jenkins
+Navigate to “Configure System” in “Manage Jenkins”
+Search for “Global Keycloak Settings” options 
+Copy keycloak OIDC JSON content in “Keycloak JSON” text area (to get json content refer “KeyCloak configuration for Jenkins” section in the document).
+Make sure to Check “Validate Token on each request” option and Uncheck “Keep login session open until access token times out?” option.
+
+Click on "Save" button.
+6) Configure global security for keycloak in Jenkins. 
+Navigate to “Configure Global Security” in “Manage Jenkins”
+Select “Security Realm” as “Keycloak Authentication Plugin” in “Access Control” options.
+7) Disable OpenShift authentication
+Login into Openshift haproxy and search for the Build Jenkins project 
+Click on “Overview” menu of the project. Select deployment name of the build Jenkins. Click on “Edit” in menu icon.
+Refer sample screenshot below for the same.
+
+
+Search for “Environment Variables” section.
+Overwrite “OPENSHIFT_ENABLE_OAUTH” value as “false” and click on “Save” button.
+
+Now logout from Jenkins application and login again into Jenkins with keycloak authentication.
+
+
+Now install plugins required for CICD. Before installing plugins configure proxy in Jenkins.
+To do so click on “Manage Jenkins” option, click on “Manage Plugins” option, click on “Advanced” tab.
+
+Provide configuration as provided in below screenshot and click on “Submit” button.
+
+Proxy configuration is saved to Jenkins. Now it is possible to download and install plugins.
+[Plugins mentioned in Pre-requisites section need to be installed.] 
+
+To install a plugin in Jenkins click on “Available” tab in the same page.
+
+To install SSH Slaves plugin of version 1.26
+Type in “Filter:” field “SSH Slaves” as shown in below screenshot
+
+Select the checkbox SSH Slaves as shown in below screenshot
+
+Click on “Install without restart” button to start installing the plugin.
+
+Note that while installing a plugin in Jenkins the dependency plugins will be downloaded and installed automatically.
+Refer screenshot below
+
+
+The below screenshot shows that plugins are installed successfully.
+
+
+Similarly install plugins mentioned in Pre-requisites section.
+
+
+
+Adding Slaves to Jenkins Master
+Slaves are VMs created in OpenStack. VMs can be of RHEL-7 and UBUNTU-16.04
+
+In both RHEL-7 and UBUNTU-16.04 VMs make sure that following packages are installed
+Oracle Java 8 (8u181)
+RHEL-7: https://tecadmin.net/install-java-8-on-centos-rhel-and-fedora/
+The link provided above will refer to Java SE 8u171 which is deprecated so download Java SE 8u181
+So the “wget” command in the link referred will replaced as follows
+wget --no-cookies --no-check-certificate --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" "http://download.oracle.com/otn-pub/java/jdk/8u181-b13/96a7b8442fe848ef90c96a2fad6ed6d1/jdk-8u181-linux-x64.tar.gz"
+UBUNTU 16.04: https://www.digitalocean.com/community/tutorials/how-to-install-java-with-apt-get-on-ubuntu-16-04
+[Please refer the link provided for installation steps in case of if steps are not available.]
+Maven v3.5.4 
+RHEL-7: https://www.vultr.com/docs/how-to-install-apache-maven-3-5-on-centos-7
+UBUNTU 16.04: https://www.vultr.com/docs/how-to-install-apache-maven-on-ubuntu-16-04
+[Please refer the link provided for installation steps in case of if steps are not available.]
+Python 2.7 or higher
+
+jq (JSON Query Processor)
+RHEL-7:
+$ sudo yum install jq –y
+Ubuntu 16.04:
+$ sudo apt-get install jq -y
+GIT
+Ubuntu 16.04: 
+$ sudo apt-get install git –y
+RHEL-7:
+$ sudo yum install git -y
+Ansible 2.4.4
+Download epel-release rpm package 
+$ sudo wget http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+Run the epel-release rpm package
+$ sudo yum install epel-release-latest-7.noarch.rpm –y
+Install pip package  
+$ sudo yum install python-pip –y
+Install ansible v2.4.4
+$ sudo pip install ansible==2.4.4
+Verify ansible version
+$ ansible –version
+Also install following pip packages
+nose v1.3.7
+$ sudo pip install nose==1.3.7 
+pylint v1.9.2
+$ sudo pip install pylint==1.9.2
+
+To install Zip package
+$ sudo  yum install zip unzip -y
+
+
+OpenShift Client
+Download the latest oc-client for your OS(linux) from RedHat Repository, using the subscription credentials.
+Create a directory for installing oc-client tool
+$ sudo mkdir /home/<home_user_dir>/oc-tool 
+[<home_user_dir> is the default user’s directory in home directory]
+[Download the archive at “/home/<home_user_dir>/oc-tool” directory]
+$wget https://access.cdn.redhat.com//content/origin/files/sha256/5e/5eeccf251f9a522dbb76c230c107b5536636ac0fd48ddebfefbde8124834716f/oc-3.6.173.0.21-linux.tar.gz?_auth_=1533898836_aa63838a40016a2597c689bc2630f93d
+The download link above can be obtained by logging into redhat portal. After logging into the portal search for oc-client binary package and right click on it and click on “copy link address” option.
+
+Rename the file
+$ mv oc-3.6.173.0.21-linux.tar.gz?_auth_=1533898836_aa63838a40016a2597c689bc2630f93d oc-3.6.173.0.21-linux.tar.gz
+Extract the file. OC command tool will be extracted.
+$ tar xzvf oc-3.6.173.0.21-linux.tar.gz
+
+Set the path of OC command tool.
+$ vi ~/.bashrc
+Add highlighted line as shown in below screenshot
+
+$ source ~/.bashrc
+Add following lines in bashrc file proxy settings.
+$ vi ~/.bahsrc
+export http_proxy=http://10.158.100.1:8080/
+export ftp_proxy=http://10.158.100.1:8080/
+export https_proxy=http://10.158.100.1:8080/
+export no_proxy=localhost,127.0.0.1,instance-data,169.254.169.254,.nsn-net.net,.nsn-rdnet.net,.ext.net.nokia.com,.int.net.nokia.com,.inside.nsn.com,.inside.nokiasiemensnetworks.com,.project.matrix.com
+
+Add OCP url in hosts file in salve
+$ sudo vi /etc/hosts
+
+[IP address is haproxy VM’s address and host name is OCP hostname]
+
+Repeat following step for root user as well
+“Add following lines in bashrc file proxy settings.”
+
+Verify OC installation by logging into OCP
+$ oc login https://haproxy.project.matrix.com:8443
+
+
+Installations and Configurations in Ubuntu 16.04 slave:
+Install Python 2.7
+By default Ubuntu 16.04 is installed with Python 2.7 and above version
+Check Python version
+# python –version
+
+Install “pip” package
+# apt-get install python-pip python-dev build-essential –y
+Install following library packages using pip. 
+psycopg2
+pymongo
+requests
+robotframework
+robotframework-angularjs
+robotframework-databaselibraryi
+robotframework-mongodblibrary
+robotframework-requests
+robotframework-selenium2library
+selenium
+xlrd
+xlutils
+xlwt
+
+To install all library packages at once run following command
+# for pkg in "psycopg2 pymongo requests robotframework robotframework-angularjs robotframework-databaselibrary robotframework-mongodblibrary robotframework-requests robotframework-selenium2library selenium xlrd xlutils xlwt"; do pip install $pkg --proxy=10.158.100.1:8080; done
+
+After successful installation verify whether library packages are installed with latest respective versions.
+Run following command to list all library packages
+# pip list
+Download compatible version of chrome browser driver or any other browser’s driver [chrome browser driver preferred]
+# apt-get update –y
+# apt-get install xvfb –y
+
+# apt-get install fonts-liberation xdg-utils libxss1 libappindicator1 libindicator7 –y
+
+
+Download Google Chrome browser package fro Ubuntu 16.04 64-bit
+# wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb 
+
+Install
+# dpkg -i google-chrome*.deb
+
+Google Chrome will ask for dependencies then run below command to install dependencies\
+# apt-get -f install –y
+# apt-get update –y
+
+Download chrome driver archive
+# wget https://chromedriver.storage.googleapis.com/2.22/chromedriver_linux64.zip
+Extract the archive to get chrome driver.
+# unzip chromedriver_linux64.zip  
+Copy the chrome driver executor file “chromedriver” as an executable in Ubuntu.
+# cp chromedirver /usr/bin
+
+
+
+The generic procedure of adding a slave to Jenkins master is given below
+Navigate to “Manage Jenkins” “Manage Nodes”
+
+Click on New Node. 
+Provide “Node name”, select “Permanent Agent” option and click on OK button.
+
+Configure the new node as shown in the screenshot below
+Mention “Remote root directory” which is accessible in the VM. (The mentioned directory should have permissions to read and write the workspace of the job.)
+Select “Launch method” as “Launch slave agents via SSH” then following options will be available
+Host: Provide IP address of the VM in this field.
+Select “Host Key Verification Strategy” as “Non verifying Verification Strategy”.
+
+Now to provide Credentials click on “Add” dropdown button and select “Jenkins” option.
+
+A popup window “Jenkins Credentials Provider: Jenkins” is displayed on screen to provide credentials of VM.
+
+Select “Kind” option as “SSH Username with private key”.
+
+Upon selection fields shown in below screenshot will be enabled. Provide details accordingly. Refer screenshot for sample configuration.
+Provide “Username” as SSH user name to login into VM.
+Select “Private Key” as “Enter directly” then paste the .pem key content in the text box.
+[.pem can be downloaded after creating VM in openstack. Download and open the file and paste the content as it is inside the text box.]
+Provide “Description” so that it is identified while selecting Credentials.
+
+Click on “Add” button and navigate to previous page.
+Now select added credentials “Credentials” dropdown.
+(Observe the screenshot below the credentials are identified by Username (Description)).
+After selection click on “Save” button.
+
+After clicking on Save button the added slave is displayed. (Wait for the slave to connect and wait till its status is online).
+
+If there is a red cross mark shown on node icon then refresh the page. 
+
+Note:
+If the red cross mark is still shown even after refreshing page then reconfigure the slave with proper credentials like “Username” or “Private Key”.
+
+Creating CICD Job generator in Build Jenkins
+A job is created in Build Jenkins to generate CI-CD template jobs which is also called as “Seed Job”.
+When Seed Job is triggered the script inside it will run and generate CI-CD templates.
+To create a Seed Job:
+In Jenkins home page click on “New Item” option.
+
+Provide “Enter an item name” as “CICD_Generator_v1”.
+Select “Freestyle project” option and click on “OK” button.
+
+Upon clicking page will show default configuration of Seed_Job.
+
+In General section Select “Restrict where this project can be run” option and provide “Label Expression” as label name used while creating new node.
+
+
+Select “This project is parameterized” option.
+(String type parameters need to be configured for Seed Job)
+The parameters are as follows and the Name should be configured accordingly (Description is not mandatory)
+gitProjectUrl
+projectName
+jobType
+gitRepoName
+projectId
+apiModelUrl
+gitProjectId
+tags
+
+Click on “Add Parameter” dropdown and select “String Parameter” option from dropdown.
+
+[Repeat the step to add the other parameters]
+Provide the “Name” and “Description” respectively as in the sample screenshot below. 
+
+Scroll down to Build Section
+
+Click on “Add build step” dropdown button and select “Process Job DSLs” option.
+Select “Use the provided DSL script” radio button.
+
+Provide script inside “DSL Script” text box.
+
+The script is located at git location: http://10.129.194.153/matrix/jjcfw/raw/master/SIT-CICDFW.groovy
+
+[The script has an email id (ends with domain ‘nokia.com’) configured to receive notifications when Jenkins job succeeds or fails. Configure the mail id as per the requirement.]
+
+Mail configuration in Jenkins
+Mail configuration in Jenkins is used for mail notifications when job succeeds or fails.
+Click on “Manage Jenkins” “Configure System”
+Search for “Extended E-mail Notification” section and provide “SMTP server” as “dhn-mailrelay.emea.nsn-intra.net” and click on “Save” button.
+ 
+
+
+
+Click on “Save” button.
+--------------------------------------------------------------------------------------------------------------------------
+
+Create infrastructure metadata
+Seed Job will use few extra parameters other than Build parameters and the parameters are stored in file in json format.
+
+
+Make necessary changes in the configuration json file as per the environment.
+
+This file should be placed in Slave VM (the one which is added in previous steps).
+1) Login into Slave VM
+2) Change to the “Remote Root Directory” (this directory was configured in manage nodes section) of the slave VM. Refer screenshot below
+
+
+From above screenshot the directory is “/home/cloud-user”\
+# cd /home/cloud-user
+Now change to “workspace” directory as shown below
+# cd workspace/
+
+3) Create a directory with Seed Job name
+# mkdir CICD_Generator_v1
+# cd CICD_Generator_v1
+Copy the attached file in to the directory
+
+
+
+
+Note:
+Before copying the file to the directory make necessary changes as per your requirements
+Change all values possible inside file.
+
+
+Note:
+Follow the same steps to create “Execution Jenkins” instance as well but skip “Creating CICD Job generator in Build Jenkins” section.
+
+Creating http routes in Jenkins
+For workflow manager to trigger Jenkins job http routes need to be created in “execution jenkins”.
+Follow below steps to create http routes.
+
+Login into OpenShift
+
+Select the project in which execution jenkins is created.
+Click on Applications  Routes
+Click on “Create Route” button.
+
+Provide name to the route to identify the route.
+Provide service name as jenkins deployment (Don’t select jnlp service)
+Make sure “Target Port” options is selected as “80  8080 (TCP)”
+
+Click on “Create” button to create the route.
+
+
+
+Route will be created and displayed
+
+
+Now access the execution Jenkins url in browser to get crumb value.
+This crumb will be used to authenticate http route of execution Jenkins
+
+So to get crumb access https://<executionjenkins_url>/crumbIssuer/api/json 
+A json will be generated which will have crumb value. Save this crumb value to use in cicd_config.json file.
+
+
+Refer the screenshot below.
+
+
+API tokens need to be generated in both Build and Execution Jenkins
+Below screenshot shows API token generation in execution Jenkins 
+Click on “matrix” username dropdown and select “Configure” option.
+
+
+
+In “API Token” section 
+Click on “Add new Token” button
+Provide username as “matrix-admin” and click on “Generate” button.
+A token will be generated for user “matrix-admin” user.
+
+
+
+Repeat the above procedure to generate new token (with Jenkins admin user name) in Build Jenkins.
+
+
+
+
+These tokens must be saved in a file to use in cicd_config.json file.
+
+
+Add the http routes in /etc/hosts file of gitlab server VM.
+[map the routes to haproxy IP address.]
+
+
+Creating Roles and Assigning Roles in Build Jenkins 
+A role is created in Jenkins to trigger webhooks whenever SCM has changes pushed by user.
+To create a role
+Click on Manage Jenkins  Manage and Assign roles
+
+
+Click on “Manage Roles” option
+
+
+Add a Role in “Role to add” section as shown in below screenshot and click on “Add” button.
+
+
+Role will be added in “Global roles” matrix table as shown in the below screenshot.
+Add “Build” privileges in the “Job” section to the role.
+
+Click on “Save” button 
+
+Click on “Assign Roles” option
+
+Add existing Jenkins user and assign role privileges as shown below screenshots.
+In “User/group to add” section provide existing user name of Jenkins.
+Click on “Add” button.
+
+
+Assign role privileges to the Jenkins user as shown in below screenshot
+
+Click on “Save” button.
+
+Configure Access Controls in Build Jenkins
+Access controls are configured in global security section of Jenkins
+Click on “Manage Jenkins” “Configure Global Security” option.
+Select “Role Based Strategy” option in “Authorization” section of “Security Realm” Access Control.
+
+
+Search for “Access Control for Builds” option and click on “Add” dropdown.
+Select “Project Default Build Authorization” option as shown in below screenshot.
+
+
+Now select 	“Strategy” as “Run as Specific user”.
+Provide existing Jenkins username in “User ID” field as shown in below screenshot.
+
+
+
+
+
+
+
+
+
+
+ Project Explorer
+Prerequisites:
+JIRA, JIRA Confluence, LDAP, Keycloak(SSO), mongo DB, Postgres, Minio, Open shift, Gitlab, Jenkins, nexus needs to be installed before setting up the Project Explorer .
+Credentails Required:
+ 1. Git to access the Git repo and SQL script.
+ 2. Jenkins to copy the CI/CD pipe line script.
+ 3. Creation of Space in Confluence is Mandatory for Global Account Nokia.
+ 4. While Import the user from LDAP, Jira tool should configure in Project explorer, because while import user we are adding the same user in the Jira internal directory.
+5.  At  Keycloak  tool, admin user name and password need to configure , other wise after deployment  we are not able to access the application.
+Step1. Source code Details
+	Project Explorer Git Source Code is available in the below git path:
+Git URL: http://10.129.194.153/root/DigitalMarketing.git
+
+
+Step2: Project Creation at OCP
+             Create a Project in Openshift with project name “projectexplorer”.
+	Project: projectexplorer
+
+Step 3. Below CICD procedure to be followed for Project explorer Jenkins job creation
+
+
+            
+Step4. Install the postgres container, then execute the script for schema creation, tables creation,           	and master data insertion script.
+
+ 	Script Path: 
+ 	http://10.129.194.153/pitchuka/PEinstalationDocuments/blob/master/Project%20Explorer	%20database%20script.sql
+
+     	Down load the Database script file and connect to data base open the Query tool editor, then 	execute the script.
+
+Step 5:	Config Maps Creation
+
+	Config maps should create for key cloak and Database.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+We also have to add another three config maps related to Jenkins i.e the Jenkins in which the job should be disabled when we retire a project.The details of Jenkins that we need to add in config maps is the Jenkins service URL, Jenkins admin username and admin password as shown below.
+
+EXECJENKINSTOKEN
+daa297c19653132169c7086cfe189216
+EXECJENKINSUSER
+matrix
+EXECJENKINSURL
+http://jenkins.executionjenkins.svc:80
+Keycloakadminpwd
+admin
+Keycloakadminuser
+admin
+
+
+Now we need to add Environment variables for this deployment.
+Go to Openshift , go to your project “projectexplorer” and then click on Applications > Deployments.
+
+
+
+
+
+
+
+
+You will be redirected as below:
+
+
+
+
+Click on the deployment. It will be shown as below:
+
+
+
+
+Click on the “Environment” tab and then add the “Environment variables” there as shown below:
+
+
+
+
+
+
+
+Click on “Add Environment Variable Using a Config Map or Secret”:
+It will be shown as below:
+
+
+Here click on drop down “select a resource”.
+
+
+
+
+The drop-down will show you some other values and also the values that we have added in the configmaps under “CONFIG MAP” as shown above.
+
+Then select each and every value that we have added in ConfigMap. The right hand side field “Select Key” will be auto populated. Give the “Name” field that is present on left hand side the value same as that of key as shown below:
+
+
+
+
+
+
+
+After adding all the variables that we have added in ConfigMaps click on save.
+Step 6: Keycloak Configuration for PE Application:	
+ Below are the steps to add PE application as a client in Keycloak server.
+
+
+
+1. Login to Keycloak server with admin credentials:
+2. Select the realm where all the tools of Matrix are configured.
+3. Create a client for PE application with below details  and the configuration as shown below:
+ Client Id: Project Explorer
+Valid Redirect URL: url to access application (deployed in open shift) and add '/*' at the end of url.
+
+
+
+Click on save. This is the configuration on Keycloak side.
+
+
+
+
+
+Validation steps for Project explorer deployment:
+
+Inorder to access the ProjectExplorer go to Openshift from UI and login with valid credentials.
+
+Go to project “projectexplorer”:
+
+
+
+
+
+
+You will be redirected as shown above.
+
+Click on the route that is given on the right hand side.
+i.e “http://projectexplorer-projectexplorer.haproxy.project.matrix.com”
+
+You will be redirected to ProjectExplorer login page directly.
+
+Now you can login into ProjectExplorer giving valid credentials.
+
+NOTE:
+Inorder to access the URL’s of applications deployed in Openshift add an entry in the “hosts” file with an entry of route URL against the Haproxy’s IP address.
+
+Eg:  10.129.194.58  projectexplorer-projectexplorer.haproxy.project.matrix.com
+
+
+
+
+
+
+
+
+Procedure to Configure Tools:
+Login into Project Explorer.
+Click on “AdminOperations” dropdown present on the top right corner and select “Configure Tools”.
+
+
+
+
+
+
+You will be redirected to another page as shown below:
+
+
+
+
+				    	
+
+    Click on “Add Tool” button present on the top right corner.
+ A pop up comes in which we have to enter the tools details as shown below:
+
+
+In the pop up enter the “Tool Name” , “Token Number” i.e. admin token required for some of the 	tools like Jenkins, Git, OCP etc, admin user name in “User Name” filed, admin password in 	“Password” filed , the tool URL in the “URL” field of the format eg: <protocol>://<Ipaddress>:<Port 	No>
+	Eg: http://10.129.194.41:8080
+	Note: - User name (admin) is required for all the tools.
+NOTE:  It is mandatory to provide the tool URL in the below format only.
+<protocol>://<Ipaddress>:<PortNo>
+Don’t add “/” or any extra character in the tool Url field.
+Eg for Invalid URL:  http://10.129.194.41:8080/
+
+Below are the details of the tools for which password/token is to be provided:
+Jira: Username/password
+Confluence: Username/password
+Git: Username/Token
+Jenkins: Username/Token
+OCP: Username/Token
+Minio: Username/password
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Then choose the Image for Icons of the tools and select one of the “Role” in the drop-down and 	click on “create”.
+	If the tool is present in OCP then we need to get the service URL of that particular tool from Open 	shift and add the Service Url manually in the Database in the “Matrix Tools” table.
+	To get the service URL, login into Open shift and then go to the application that we are using as a 	part of cloning and then click on “Applications” > “Services” as shown below:
+
+
+
+
+It will show the list of services available as shown below:
+
+
+
+
+
+Click on the Service “openshift-minio” and you will be redirected as shown below:
+
+
+
+
+
+
+The “Hostname” here represents the servicename and the port number is the “ServicePort” number
+that is to be used.
+             Service Url should be of the format:
+	Eg: http://openshift-minio.test.svc:9000
+
+NOTE:  It is mandatory to provide the service URL in the below format only.
+<protocol>://<Ipaddress>:<PortNo>
+Don’t add “/” or any extra character in the tool Url field.
+Eg : for Invalid URL: http://openshift-minio.test.svc:9000/
+	
+Note: - Follow the same steps to get 'Jenkins' service URL and add service URL into database.
+	While entering the tool name the name of the tool should be in the below format only:
+		1. Jira
+		2. Minio
+		3. GIT
+		4. CONFLUENCE
+		5. OCP
+		6. Jenkins
+
+Note: - It is mandatory to have in the above format only otherwise cloning will not happen.
+
+ Matrix Health Check
+Introduction:
+
+This section includes installation and Configuration steps of Matrix Health Check setup.
+
+
+
+In the current setup, the master node, that is Build Jenkins node and one slave node have been installed.
+Prerequisites and Preparation           
+Build Jenkins installation is done in Matrix environment
+Slave is installed with Linux Ubuntu image
+
+Configuration of Jenkins Master Node
+Below steps illustrates steps for Build Jenkins Master Node Configuration:
+
+Build Jenkins Configuration:
+Jenkins version: Jenkins 2.130
+Install Jenkins Master – Linux i386
+Linux jenkinshc-1-fhpbv 3.10.0-693.17.1.el7.x86_64 #1 SMP Sun Jan 14 10:36:03 EST 2018 x86_64 x86_64 x86_64 GNU/Linux
+
+Jenkins Plugins installation:
+Give proxy details in Jenkins = > Manage Jenkins -> Manage Plugins -> Advanced
+Then install the below plugins from Jenkins = > Manage Jenkins -> Manage Plugins -> Available list
+
+
+Discard Old Build plugin:
+This plugin enables detail configuration to discard old builds like using logfile size / status / days/ intervals days / build num / logfile regular expression.
+
+Email Extension Plugin:
+This plugin is a replacement for Jenkins's email publisher. It allows to configure every aspect of email notifications: when an email is sent, who should receive it and what the email says
+
+Persistent Build Queue Plugin:
+The Persistent Build Queue Plugin preserves the build queue across Jenkins restart.
+
+Robot Framework plugin: 
+This publisher stores Robot Framework test reports for builds and shows summaries of them in project and build views along with trend graph.
+
+Email Notification Configuration in Build Jenkins:
+1. Open Jenkins using the following URL: http://localhost:8080/ on any browser.
+
+
+
+
+2. Click the ‘Manage Jenkins’ menu option displayed at the right side of the screen. You will be redirected to the ‘Manage Jenkins’ page, where you need to select the ‘Manage Plugin’ option.
+
+
+
+3. Click the ‘Available’ tab present at the top of the ‘Manage Plugin’ page.
+
+
+4. Start typing ‘Notification’ in the ‘Filter’ field displayed at the top-right side of the ‘Manage Plugin’ page. Click the checkbox next to the ‘Email-ext plugin’ option. Click the ‘Install without restart’ button.
+
+
+
+
+5. Go to the Jenkins home page and click the ‘Manage Jenkins’ menu option. Then, select the ‘Configure System’ option.
+
+
+
+6. Enter the SMTP server name under ‘Email Notification’. Click the ‘Advanced’ button and then click the checkbox next to the ‘Use SMTP Authentication’ option. Now, set the following fields.
+Ex:
+SMTP server name : smtp.gmail.com
+SMTP Port: 456
+
+
+
+7. Check the email notification functionality by clicking the checkbox next to the ‘Test configuration by sending Test e-mail recipient’ option. Enter a valid email id and click the ‘Test configuration’ button to check whether the email id is valid or not
+
+
+
+
+8. Go to the home page and click on a created job, like Homes.
+
+
+
+Then, click the ‘Configure’ option.
+
+
+
+
+9. Click the ‘Add post-build action’ drop-down.
+
+
+
+
+
+10. Select the ‘E-mail Notification’ value.
+
+
+
+11. Enter the recipient email id in the ‘E-mail Notification’ box and select the checkbox next to the ‘Send e-mail for every unstable build’ option.
+
+
+
+12. Click the ‘Add post-build action’ drop-down and select the ‘Editable Email Notification’ value.
+
+
+
+13. Fill the ‘Editable Email Notification’ fields.
+Ex: Project Recipient List: email_id@gmail.com
+
+
+
+
+14. Click the ‘Advance Settings…’ button in the ‘Editable Email Notification’ box.
+15. Click the ‘Add Trigger’ drop-down and select the ‘Always’ option.
+
+
+
+
+
+
+16. Click the ‘Save’ button.
+17. Go to the home page and click on the job, like Homes.
+18. Click the ‘Build now’ link and check the email id after the job execution.
+
+Configuration of Slave
+Jenkins Slave Requirements:
+slave – Linux amd64
+root@matrix-health-check-slave:~# uname -a
+Linux matrix-health-check-slave 4.4.0-93-generic #116-Ubuntu SMP Fri Aug 11 21:17:51 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
+UNIX slave, version 3.7
+
+i. Installation and Configuration of Headless Browser on Linux Slave:
+
+1. Follow Below instructions to install Headless browser xvfb on linux server by running the following commands on terminal.
+sudo apt-get update
+sudo apt-get install xvfb
+2. Follow Below instructions to Install Chrome Driver with Xvfb (Ubuntu Server):
+ 	sudo apt-get install fonts-liberation xdg-utils libxss1 libappindicator1 libindicator7	   
+	wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb	   
+	sudo dpkg -i google-chrome*.deb	   
+	sudo apt-get update	   
+3.  Download chromedriver and install on the server	   
+	wget https://chromedriver.storage.googleapis.com/2.22/chromedriver_linux64.zip	   
+	#Extract	   
+	unzip chromedriver_linux64.zip	   
+	# Deploy + Permissions	   
+	sudo cp ./chromedriver /usr/bin/	   
+	sudo chmod ugo+rx /usr/bin/chromedriver	   
+	# Install Google Chrome:	   
+	sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4	   
+	# Dependencies to make "headless" chrome/selenium work:	   
+	sudo apt-get -y install xorg xvfb gtk2-engines-pixbuf	   
+sudo apt-get -y install dbus-x11 xfonts-base xfonts-100dpi xfonts-75dpi xfonts-cyrillic xfonts-scalable	   
+	# Optional but nifty: For capturing screenshots of Xvfb display:	   
+	sudo apt-get -y install imagemagick x11-apps	   
+	# Make sure that Xvfb starts everytime the box/vm is booted:	   
+	echo "Starting X virtual framebuffer (Xvfb) in background..."	   
+	Xvfb -ac :99 -screen 0 1280x1024x16 &	   
+	export DISPLAY=:99	   
+		 
+4. Verify if Xvfb is running or not by executing below command:
+ps -aef | grep Xvfb
+root      3898  3890  0 Apr26 ?        00:05:06 Xvfb :2036489373 -screen 0 1920x1080x24
+root     24231     1  0 Apr20 ?        00:00:00 Xvfb :99
+
+5. If Xvfb is running, Configure Automatic Start Up, Configure Automatic Start Up
+Edit the rc.local file to start the server automatically on boot, then start the server.
+After the package is installed, add the following line to the /etc/rc.local file to start the server on boot:
+/usr/bin/Xvfb :1 -screen 0 1152x900x8&
+Either reboot the system to start the Xvfb server or manually run the following command to start the Xvfb server without rebooting the system:
+/usr/bin/Xvfb :1 -screen 0 1152x900x8&
+
+ii. RobotFrameWork Configuration Details:-
+Follow below steps to configure RobotFramework on Linux slave server.
+1. Install Python 2.7 and set the environment variables.
+2. Check Python version using command: python --verison and pip --version 
+3. If Pip is not present try to install pip and check pip version using command: pip --version
+4. Install below Library files by using Below Commands
+	1. pip install psycopg2
+	2. pip install pymongo
+	3. pip install requests
+	4. pip install robotframework
+	5. pip install robotframework-angularjs
+	6. pip install robotframework-databaselibraryi
+	7. pip install robotframework-mongodblibrary
+	8. pip install robotframework-requests
+	9. pip install robotframework-selenium2library
+	10. pip install selenium
+	11. pip install xlrd
+	12. pip install xlutils
+	13. pip install xlwt
+
+6. After the successful installation check for the Libraries with suitable versions using command: pip list
+7. Install jq using below command
+wget -O jq https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64 
+chmod +x ./jq
+cp jq /usr/bin  
+
+iii.	Steps to add Slave node in Jenkins:
+Prerequisities:
+SSH, SSH SLAVES plugins should be installed
+a) If proxy env, go to Jenkins-> manage Jenkins-> manage plugins-> add proxy in last tab (10.158.100.1, 8080 for ee cloud)
+b) To add new node, go to manage Jenkins-> manage nodes-> new node. Give name (VNF_SLAVE). Click on permanent agent and press OK
+c) In configuration, change number of executors to 5, Remote Directory: /root, labels: VNF_SLAVE, Launch method to "Launch slave agents via SSH".
+Enter Slave Host floating IP.
+Add credentials -> kind: SSH Username with private key, Username: root, Private Key: Enter directly (pem file content) -> Add.  Select slave credentials,
+Host Key Verification Strategy: "Non verifying Verification Strategy"
+d) save the configuration
+Jenkins job creation
+Follow the attached procedure to create Jenkins Job for Matrix Health check.
+
+Rechability Test Suite Execution
+i. Execution of scripts Through Command Line:
+    1. Open Command Line
+    2. Change directory to code location using command: cd FilePath
+    3. Executing the script in Windows environment using command: pybot -v Browser:Chrome/FF/IE/Edge -v ENV:Windows Filename.robot
+    4. Executing the script in Linux environment using command: pytbot -v Browser:Chrome/FF -v Filename.robot
+    5. If you want to execute any particular test case use tags and the command is
+    pytbot -v Browser:Chrome/FF/IE/Edge -v ENV:Windows -i TagName Filename.robot		
+    6. Try running the code using above command and after successfull execution, find log.html/Report.html/output.html File for execution results in a created project directory.
+
+
+
+Workflow Manager
+Prerequisites:
+Keycloak(SSO), Postgres, Mongodb,Openshift needs to be installed before setting up the Workflow Manager. 
+Step1. Source code Details
+Workflow Manager source code is available in the below git path:
+Git URL: http://10.129.194.153/madamanc/self-service-portal.git
+Step 2. Name Space Creation at OCP
+Namespace: Namespace under which workflow manager is deployed (Eg:workflow-manager1)
+Step 3. Below CICD procedure to be followed for Project explorer Jenkins job creation 
+
+Step 4. Install the postgres container, then execute the script from below location for schema creation, tables creation.
+http://10.129.194.153/madamanc/self-service-portal/blob/master/InstallationDocs/Schema.sql
+Step 5. Generating token for Accessing Openshift REST API. Login to open shit platform and execute the following steps.
+Go to project context
+oc project workflow-manager1
+Create a file workflow-manager1.json with content below
+{
+"apiVersion": "v1",
+"kind": "ServiceAccount",
+"metadata": {
+"name": "workflow-manager1"
+}
+}
+Execute the following
+oc create -f workflow-manager1.json
+Add sufficient privileges 
+oadm policy add-cluster-role-to-user cluster-admin system:serviceaccount:workflow-manager1:workflow-manager1
+cluster role "cluster-admin" added: "system:serviceaccount:workflow-manager1:workflow-manager1"
+Describe the created service account and fetch the Token (highlighted)
+oc describe sa workflow-manager1
+Name: workflow-manager1
+Namespace: workflowmanager
+Labels: <none>
+Annotations: <none>
+Image pull secrets: workflow-manager1-dockercfg-9g5rb
+Mountable secrets: workflow-manager1-token-jznl0
+workflow-manager1-dockercfg-9g5rb
+Tokens: workflow-manager1-token-hwnq6
+workflow-manager1-token-jznl0
+Describe the Secret and fetch the token from output(highlighted).
+oc describe secret workflow-manager1-token-hwnq6
+Name: workflow-manager1-token-hwnq6
+Namespace: workflowmanager
+Labels: <none>
+Annotations: kubernetes.io/created-by=openshift.io/create-dockercfg-secrets
+kubernetes.io/service-account.name=workflow-manager1
+kubernetes.io/service-account.uid=9df9ef84-ba87-11e8-ad1b-fa163e4dc5cd
+Type: kubernetes.io/service-account-token
+Data
+====
+ca.crt: 1070 bytes
+namespace: 15 bytes
+service-ca.crt: 2186 bytes
+token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJ3b3JrZmxvd21hbmFnZXIiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoid29ya2Zsb3ctbWFuYWdlcjEtdG9rZW4taHducTYiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoid29ya2Zsb3ctbWFuYWdlcjEiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC51aWQiOiI5ZGY5ZWY4NC1iYTg3LTExZTgtYWQxYi1mYTE2M2U0ZGM1Y2QiLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6d29ya2Zsb3dtYW5hZ2VyOndvcmtmbG93LW1hbmFnZXIxIn0.Tht2mxii7zNi1gcwV4kKbVfh3jSdpEqfPtV-N4ifiqFheFPRb3ZoW7fI8H-ZhsUE6nxdnRdYOWB6eiL8hDsCbwaCHaOvnsghIkHxyNF-dVC-2P6mpNkdsGgL6RuR-6sk-8V5wrVTZB4TCKIS5KVyxQi0cVXHFFgeG4PtYIITL1VOKzhle6iOos2oTAE8F7xjzWEZgtu7j7IyYWRRqanbMEtBYAl3QE8aLwYofwgl1Udj98QRMPk_kaUWfXIvhBa6JPWtYUVqWxKFqeUBuRbPQIUxKA48oFNWUeKU0vsbMQQ8aQ0IOC_AQbxYaOrMlzHQxvf2VXTS1ClnMiqFqcbbeg
+Step 6. Keycloak Configuration for workflow manager application.
+Below are the steps to add workflow manager application as a client in Keycloak server.
+Login to Admin Console of Keycloak server with admin credentials
+
+Select the realm where all the tools of Matrix are configured.
+Navigate to Clients → Create.
+create a client for workflow manager with below details.
+Client Id : WFM
+Valid Redirect URL : url to access application(deployed in openshift) and add '/*' at the end of url
+
+
+
+Step 7. Create a Keycloak client and user for fetching accestoken from keycloak.
+Login to Admin Console of Keycloak server with admin credentials
+Navigate to the realm where all the tools of Matrix are configured
+Navigate to Clients → Create.
+Create a client for fetching accestoken from keycloak using the below details.
+Client Id : clientTokenAccess
+Valid Redirect URL : *
+
+Navigate to users → Add user. 
+Create an user name “token_access_user” and hit save
+
+
+once the user is created successfully, Navigate to credential section and set the password as “token_access_user”. Set the 'Temporary' option to off and click on 'Reset Password'.
+
+Step 8. Generate GIT admin access token
+Login to GIT Lab server used by Project-explorer as root user.
+Navigate to Setttings → Access Tokens 
+
+update the fields as shown bellow and click create Personal token
+Name: workflowmanager
+Expires at: Select a date till which the token is valid
+Select all the scopes
+
+copy the generated Access token and save it somewhere.(it can be viewed only once)
+
+
+Step 9. Setting config maps and Environment variables 
+Update the following Environment variables in configuration Map once the application is deployed by Jenkins pipeline.
+Login to Openshift UI and select the project workflow-manager1
+
+Go to Resources → Config Maps
+
+Click on 'Create Config Map' from the screen.
+
+Add the entries from table(Config Map Table) one by one and then click Add Item.
+
+Config Map Table
+
+KEY
+VALUE
+CATLOGDGMOPMETADATAURL
+http://<operationcatalogtool route>/api/digimopcatalog/v1/getProjectDataByProjectId?projectId={id}
+CATLOGDGMOPURL
+http://<operationcatalogtool route>/api/digimopcatalog/v1/getDigiMopsByProjectId?projectId={id}
+DIGIMOPCATALOGURL
+<operationcatalogtool route> 
+E.G: http://operationcatalog-operationcatalog.haproxy.project.stagingmatrix.com
+GITPASSWORD
+GIT Password .E.G: nokia@12345
+GITUSER
+GIT Username
+GIT_ACCESS_TOKEN
+<ke42ZsF91e8WTC-yzMr7>Token generated in step 8
+HIBERNATEDEFAULTSCHEMAURL
+Postgres Schema Name
+JIRABASEURL
+http://<jiraIP>:<Port>
+JIRACUSTOMFIELD
+Jira custom field value E.G: customfield_10011
+JIRAPASSWORD
+Jira Password
+JIRAURL
+http://<jiraIP>:<Port>/rest/api/2/issue/
+JIRAUSERNAME
+Jira username
+KEYCLOAKENABLEBASICAUTH
+true
+KEYCLOAKPRINCIPALATTRIBUTE
+preferred_username
+KEYCLOAKREALM
+<keycloak realm name > Eg: Matrix
+KEYCLOAKPUBLICCLIENT
+true
+KEYCLOAKRESOURCE
+<keycloak client name> Eg:WFM
+
+KEYCLOAKSSLREQUIRED
+none
+
+KEYCLOAK_ACCESSTOKEN
+http://<keycloak IP>:<port>/auth/realms/master/protocol/openid-connect/token
+
+KEYCLOAK_CLIENT
+<clientTokenAccess>client created in Step 7
+
+KEYCLOAK_CLIENT_PWD 
+Password set for user created in Step 7
+
+KEYCLOAK_CLIENT_USER 
+User created in Step 7
+
+KEYCLOAK_USER_NAME
+Keycloak username
+
+KEYCLOAK_USER_PASSWORD
+Keycloak password
+
+KEYCLOALAUTHSERVERURL
+http://<keyclaok IP>: <Port>/auth
+
+KEYCLOCKENABLED
+true
+
+MAXFILESIZEINBYTES
+52428800
+
+MINIOACCESSKEY
+Minio accesskey Eg:minio
+
+MINIOSECRETKEY
+Minio Secretkey Eg:matrixminio
+
+MINIOURL
+Http://<minio servicename>:<port>/ 
+Eg: http://minio.minio.svc:9000/
+
+MONGODBURL
+mongodb://<username>:<password>@<servicename>:<port>/<databasename>
+
+MONGODB_SCHEMA
+MongoDB Schema Name Eg:sampledb
+
+NEXUSURL
+http://nexus-buildjenkins.apps.haproxy.matrix.cap.mchm.nsn-rdnet.net/service/siesta/rest/beta/assets
+
+OPENSHIFTURL
+Openshift Base route Url 
+Eg: https://haproxy.project.stagingmatrix.com:8443/
+
+PEGETTOOLSURL
+Project Explorer base route Url .
+Eg: http://projectexplorer-projectexplorer.haproxy.project.stagingmatrix.com
+
+PE_GET_ROLE_PROJ_ACNT 
+http://<project explorer base url>/getEnrolledProjects
+
+POSTGRESPASSWORD
+Postgres Password Eg:lXtBMW12olYmx2SM
+
+POSTGRESURL
+jdbc:postgresql://<service name>:<Port>/<databasename>
+
+POSTGRESUSERNAME
+Postgres username Eg:userYV3
+
+SHOWSQL
+false
+
+TOKEN
+Token generated from Step-5.
+eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJvcGVyYXRpb25jYXRhbG9nIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6Im9wZXJhdGlvbmNhdGFsb2ctdG9rZW4tMGNncWoiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoib3BlcmF0aW9uY2F0YWxvZyIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6IjQ2M2YzNjVhLTliYTEtMTFlOC1hZTNmLWZhMTYzZWYzNzI0ZSIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpvcGVyYXRpb25jYXRhbG9nOm9wZXJhdGlvbmNhdGFsb2cifQ.lAnhEcv6knxlQOhr0PHG_KfcPFBmuX2xfT7weZLO2U6FndrQzwd-5plgKgBCX3qH_Lp5a5gl0-7EDFRC41f8qGxCKRmUkiQ2-JK0ExTUjfJcllfaQOTW3wmNYiQqDLoJX_58NljMFxLASQJMEKr8zVD9sUZTfEw0ZpKjxE9FzPLxH8TdkWCODvy7IZMa9ksDofe08rnnBF7P6_Xe9ieSY27exKOqCXFnMd3hIplkeAtk5RuGcNFW1HJSEgdBCVEPOCMeknbpUOgn9X8EaLeNfMVFt09dyGV-oSLiu_5v8ncH4Lad7ZarXlE_HRtE4woaVE1RIOZSiSK4ad8iJy4CbA
+
+WFMNAMESPACE
+Namespace under which workflow manager is deployed
+
+oc_namespace
+Namespace under which operation catalog is deployed
+
+oc_podName
+Running operationcatalog tool pod name
+
+
+
+
+Example Configmap yaml below:
+
+Go to Application → Deployments → Select Deployed instance → Environment → “Add Environment Variable Using a Config Map or Secret” 
+Add entries for Name(same as KEY from table), Value, Key. Repeat the process for all the entries made in Config Map.
+
+
+Click on Deploy button after adding all the Environment variables successfully.
+
+
+Step 10. Creating Jira-WebHook
+Login to jira instance as Admin
+Navigate to Settings → System → WebHooks
+Click on → create a WebHook
+
+update the details as below:
+Name → <HookName>
+URL → http://workflow-manager1-workflow-manager1.haproxy.project.stagingmatrix.com/api/jira/v1/createJiraUrl/${project.id}/${issue.id}/${issue.key} 
+Events → issuetype = Automate
+Select all Update events for issue.
+
+
+
+Hit Save and WebHook is created.
+Login to Jira backend(terminal) as root user
+Add a host entry for <workflow-manager1-workflow-manager1.haproxy.project.stagingmatrix.com> in /etc/hosts file
+Save the file
+Jenkins Job
+Create a Jenkins pipeline
+Make the pipeline paremeterized and and add the following parameters as shown in below table.
+Update the pipeline script from below link.
+http://10.129.194.153/madamanc/self-service-portal/blob/master/InstallationDocs/pipeline.groovy
+
+Parameter Type
+Name
+Default Value
+String
+namespace_name
+Namespace under which workflow manager to be deployed
+String
+git_url
+http://10.129.194.153/madamanc/self-service-portal.git
+String
+appname
+Appname for workflow manager 
+String
+port
+9090
+String
+version
+latest
+String
+Openshift_url
+Openshift baser route url
+Eg:https://haproxy.project.stagingmatrix.com:8443/
+String
+ocp_token
+Token generated in step 5
+String
+branch
+master
+Changing timeout for Workflow Manager Application:
+Openshift side, timeouts can be set on per application basis.default timeout is 1 min for router if application need more timeout than this,we can set it with(Might need to do for each deployment on usecase basis)
+oc annotate route myroute --overwrite haproxy.router.openshift.io/timeout=2s​
+Post installation steps:
+Once the WFM has been installed, all the tools like project explorer, catalog tool and CI/CD of digiMops should be updated with the WFM route and other required details. WFM URL should be added in PE admin screen specified format(Refer Project explorer installation document) so that we can access WFM from PE screen.
+verification steps:
+Login to Openshift UI
+Under 'My projects' Navigate to workflowmanager (assuming the namespace to be 'workflowmanager')
+Navigate to Applications → Pods.
+
+One of the Pod should be in Running state. Check for the Running pod and click on the same.
+Navigate to Logs
+
+Make sure that there are no exceptions/errors in logs.
+Navigate to Applications → Routes. Get the hostname
+Update the reference for workflow-manager base url in config maps of Workflowmanager and operation catalog tool with the hostname from above step.
+Login to Project explorer as developer.
+Navigate to Accounts → select an account → Projects → select a project → Available tools->Development Tools-> Workflow
+Verify if workflow manager is launched successfully.
+
+Yang Modelling Tool
+Prerequisites:
+Postgres, Openshift needs to be installed before setting up the Yang Modeler.
+ Step1. Source code Details
+	Yang Modeler source code is available in the below git path:
+	Git URL: http://10.129.194.153/madamanc/YANG-Modeler.git
+	
+
+ Step 2. Name Space Creation at OCP
+	Namespace: yangmodeler-matrix
+
+ Step 3. Below CICD procedure to be followed for Project explorer Jenkins job creation
+
+  
+
+ Step 4. Install the postgres container, then execute the script from below location for schema creation, tables creation.
+	http://10.129.194.153/pitchuka/YANG-Modeler/blob/master/InstallationDocs/Schema.sql
+
+
+Step 5.	
+
+
+
+
+
+
+
+ Step 6. Setting config maps and Environment variables
+
+	Update the following Environment variables in configuration Map once the application is deployed by Jenkins pipeline.
+
+Login to Openshift UI and select the project yangmodeler-matrix
+
+
+
+
+
+
+Go to Resources → Config Maps
+
+
+Click on 'Create Config Map' from the screen.
+
+
+Add the entries from table(Config Map Table) one by one and then click Add Item.
+
+
+
+
+
+Config Map Table
+
+KEY
+VALUE
+GITHUB_URL
+http://10.129.194.153/pitchuka/YANGModels.git
+PASSWORD
+git@12345
+USERNAME
+pitchuka
+POSTGRESURL
+jdbc:postgresql://postgresql.postgres.svc:5432/sampledb
+POSTGRESUSERNAME
+userTCV
+POSTGRESPASSWORD
+iWcx4chFnVaajaOn
+OPENSHIFTTOKEN
+Token generated from Step 5
+
+
+Go to Application → Deployments → Select Deployed instance → Environment → “Add Environment Variable Using a Config Map or Secret”
+Add entries for Name(same as KEY from table), Value, Key. Repeat the process for all the entries made in Config Map.
+
+
+
+Click on Deploy button after adding all the Environment variables successfully.
+
+
+ Jenkins Job
+
+Create a Jenkins pipeline
+Make the pipeline paremeterized and and add the following parameters as shown in below table.
+Update the pipeline script from below link.
+http://10.129.194.153/pitchuka/YANG-Modeler/blob/master/InstallationDocs/pipeline.groovy
+
+Parameter Type
+Name
+Default Value
+String
+namespace_name
+yangmodeler-matrix
+String
+git_url
+http://10.129.194.153/madamanc/YANG-Modeler.git
+String
+appname
+yangmodeler-matrix
+String
+port
+8080
+String
+version
+latest
+String
+Openshift_url
+https://haproxy.project.matrix.com:8443
+String
+ocp_token
+uoZKiTmA6VC9a3sdL1dGduJ2DLtrCr4oZSfsPgvbdf0
+
+
+Post Installation - verification steps:
+ 
+Login to Openshift UI
+Under 'My projects' Navigate to yangmodeler-matrix  (assuming the namespace to be yangmodeler-matrix)
+Navigate to Applications → Pods.
+
+One of the Pod should be in Running state. Check for the Running pod and click on the same.
+Navigate to Logs
+
+
+Make sure that there are no exceptions/errors in logs.
+Navigate to Applications → Routes. Get the hostname
+Enter the route in browser to launch the  yangmodeler-matrix.
+
+
+
+Templates
+1. Introduction
+
+Matrix templates are the base projects available across accounts and users. These template projects will be available in the project explorer, so that user can create projects of a particular type. Currently, Matrix supports Java, Python Application, Ansible script, shell script, python script and Robot Framework technologies. Hence, template projects are available for these technologies only.
+
+2. Templates Installation Overview
+   2.1 Procedure
+
+I. Templates are available for six different technologies currently – Java, Python App, Robot, Shell, Ansible and Python Scripts.
+II. Artifacts are available across different tools – for each of the above technologies.
+III. The procedure to create artifact in different tools is given in the following sections.
+IV. Now, go to each tool and follow the procedure given in section 3 for that tool to create the artifact in that tool. 
+V. Please note that source refers to the source tool from where you are copying the artifact and target refers to the target tool to which the artifact is supposed to be copied to.
+
+2.2 List of Tools
+
+I. Following tools are involved – Git, Jira & Minio. 
+II. Please note that not all tools may be applicable for each template.
+
+
+
+
+
+
+3. Creating Artifacts 
+
+The following section describes the procedure to create the artifacts across various tools mentioned in the section 2.2 above. As mentioned earlier, for each tool in the confluence page for every template, follow the steps given in this section for that respective tool.
+
+3.1 Git
+
+Download and extract all the zip files present at the following location and then commit and push then to the Git by creating individual repositories for each of them and giving the same names for the repository as the zipped folder name.
+
+https://nokia.sharepoint.com/sites/GSSIMatrixExt/SitePages/Home.aspx?RootFolder=%2Fsites%2FGSSIMatrixExt%2FShared%20Documents%2FTemplate%20Artifacts&FolderCTID=0x012000AC9BF6F7365F5B4B80016343295487A5&View=%7BC22CD051-FDD7-4E7A-848E-A7175FCEBC04%7D&InitialTabId=Ribbon%2ERead&VisibilityContext=WSSTabPersistence
+
+Note: Repositories that are created for templates should be public.
+
+3.2 Minio
+
+In Matrix, all the input and output files will be stored in Minio. For each project, a bucket is created and the bucket name is same as the project name and it has two folders inside it - input and output - to store input and output files respectively. 
+
+Since Minio does not have any option to create a folder inside a bucket using the GUI, we have to use the REST API to upload a file with folder path, so that the folder is created, as given below .
+
+To create bucket with input/output folders in Minio, please use below POST request with "file" attached in requestBody. (We can upload any sample file)
+
+For creating output folder :
+
+http://hostname:port/createTemplateBucket?filePath=output/&bucketName=test
+
+
+For creating input folder:
+
+http://hostname:port/createTemplateBucket?filePath=input/&bucketName=test
+
+Note: The highlighted part (http://hostname:port) in the URLs above needs to be replaced with the route of Workflow Manager micro service deployed in OCP.
+
+Replace test in the above URLs with the following names for the respective templates.
+
+AnsibleTemplate
+PythonAppTemplate
+PythonScriptTemplate
+JavaTemplate
+ShellTemplate
+RobotTemplate
+
+3.3 Jira
+
+	Below procedure to be followed to create artifacts in Jira:
+
+
+
+4. Prerequisites
+
+4.1 Availability of the tools
+
+a. Make sure that Workflow Manager micro service is up and running.
+b. Make sure that Minio is installed properly and is accessible.
+c. Make sure that Git, Jira, Confluence are installed properly and are accessible.
+d. Build Jenkins and Execution Jenkins should be up and running with necessary slave configuration.
+
+
+
+
+
+
+Backup & Recovery
+With Matrix Backup & Recovery procedure one can take periodic backup of whole Matrix platform. The backup procedure is totaly an automatic procedure. For restore Administrator need to trigger the restore task.
+
+Getting Started
+These instructions will give you an idea how to deploy the project on a live system and how to use it.
+
+Prerequisites
+To setup this platform the required Tools and Packages are:
+Openstack Cloud - One VM (This will be backup server. Min Requirements: RHEL7.4 or later, 8 vCPU, 32GB RAM, 1TB Storage[cinder])
+Openshift Container Platform v3.6
+Jenkins (Need to install in the Backup Server to trigger backup and restore scripts)
+GitLab (To store automation scripts)
+Docker (Need to install in Backup Server to take Openshift registry Backup)
+Openshift Client (Need to install in Backup Server to access Openshift remotely)
+Python 2.7.x (Need to install in Backup Server to run our automation scripts)
+requests
+Installation:
+1. Create a RHEL-7.4 VM on openstack.
+
+2. Create a Cinder volume of min 1TB.
+
+3. Attach the cinder volume with the instance and note down the Device Path (e.g /dev/vdb).
+
+4. Add all Proxy (Optional)
+
+Example:
+echo "export http_proxy=http://<proxy_server_ip>:<port>/" >> .bashrc
+echo "export ftp_proxy=http://<proxy_server_ip>:<port>/">> .bashrc
+echo "export https_proxy=http://<proxy_server_ip>:<port>/">> .bashrc
+echo "export no_proxy=<no_proxy>">> .bashrc
+sudo echo "proxy=http://<proxy_server_ip>:<port>/" >> /etc/yum.conf
+
+Edit /etc/rhsm/rhsm.conf
+proxy_hostname = <proxy_ip>
+proxy_port = <proxy_port>
+no_proxy = <no_proxy>
+
+5. Login to the VM and Register with Subscription manager.
+sudo subscription-manager register --username testuserr --password testpassword
+sudo subscription-manager attach --pool 8a85f98163ad8193015ghdc2c0f70e17
+sudo subscription-manager repos --disable=*
+sudo subscription-manager repos \
+--enable=rhel-7-server-rpms \
+--enable=rhel-7-server-extras-rpms \
+--enable=rhel-7-server-ose-3.6-rpms\
+--enable rhel-7-server-rh-common-rpms
+
+6. Create a directory to mount the volume. e.g. backup.
+mkdir /mnt/backup
+
+7. Mount Device Path to tha directory.
+mke2fs /dev/vdb
+mount /dev/vdb /mnt/backup/
+
+8. Make this drive to be mounted on VM boot by adding the following line in /etc/fstab.
+/dev/vdb        /mnt/backup         ext2    defaults        0    0
+
+9. Install docker.
+yum install -y docker
+
+10. Add Docker proxy
+echo 'HTTP_PROXY="<http_proxy>"' >> /etc/sysconfig/docker;
+echo 'HTTPS_PROXY="<https_proxy>"'>> /etc/sysconfig/docker;
+echo 'NO_PROXY="<no_proxy>"'>> /etc/sysconfig/docker;
+
+11. Make docker start on boot.
+sudo systemctl enable docker
+
+12. Install jenkins. Follow this link: https://wiki.jenkins.io/display/JENKINS/Installing+Jenkins+on+Red+Hat+distributions
+
+13. Once the Jenkins is up install EnvInject, Email Extension Plugin, Parameterized Scheduler and MultiJob Plugin for jenkins.
+
+14. Give Jenkins root permission. Edit /etc/sysconfig/jenkins file
+
+Change below line
+JENKINS_USER="jenkins"
+To
+JENKINS_USER="root"
+
+15. Change no of executors in Jenkins Jenkins > Configure > # of executors to 10
+
+16. Configure Jenkins Email Extension Plugin with server details.
+
+17. Download jq and extract it. Change the executable name to jq and give executable permission. Add the executable to path.
+
+18. Install git
+yum install -y git
+
+19. Install oc (Openshift client 3.6)
+
+20. Reboot Backup Server
+
+21. Clone the installer Repository
+git clone http://10.129.194.153/rudradev/backup-recovery-installer.git
+
+22. Go inside the directory
+cd backup-recovery-installer
+
+23. Run create-jobs.py and provide the inputs
+python create-jobs.py
+
+Light Matrix
+Prerequisites:
+A VM or Laptop with Centos. 
+Step1. Setup required proxy in the machine. 
+For example in centos vm, set proxy variables in .bashrc file
+
+Step 2. Docker installation
+Remove any docker repositories already present in the machine
+#sudo yum remove docker   docker-client  docker-client-latest    docker-common  docker-latest                   docker-latest-logrotate    docker-logrotate  docker-selinux   docker-engine-selinux                   docker-engine
+Update packages and install  required dependencies
+# sudo yum install -y yum-utils   device-mapper-persistent-data   lvm2
+Add official docker repository to LightMatrix machine
+# sudo yum-config-manager     --add-repo     https://download.docker.com/linux/centos/docker-ce.repo
+Install latest edition of Docker CE (Community Edition)
+#sudo yum install docker-ce
+Start docker daemon service
+# sudo systemctl start docker
+Check that docker service is running
+# sudo systemctl status docker
+
+ Step 3. Docker swarm instantiation
+
+Initialize docker swarm with the command below
+# docker swarm init
+
+ Step 4. Set insecure registry in docker daemon.json for the central matrix registry
+set insecure registry in /etc/docker/daemon.json as follows
+restart docker service
+
+Step 5. Set external route of central matrix docker registry
+
+in /etc/hosts of the LightMatrix machine, set central matrix route to connect as follows
+Example:
+10.129.194.58 docker-registry-external-default.haproxy.project.matrix.com
+Step 6. Setup required yaml files and directory structure for deploying tools in LightMatrix
+
+	Example :
+#mkdir lightmatrix
+#cd lightmatrix
+#mkdir minio
+#mkdir digimops
+Create light-matrix.yml file, digimop required yaml files and .env file
+
+
+Step 7. Install required softwares for lightmatrix tools and digimops to execute
+
+Install java for Jenkins slave node setup to work
+# yum install java-1.8.0-openjdk
+Install minio client for copying minio buckets from Central Matrix to Light Matrix.
+
+Step 8. Install postgres application
+
+Postgres application also needs to be deployed in LightMatrix machine as LightMatrix Java application uses that as database.
+# docker --debug stack deploy --compose-file /root/lightmatrix/lpostgres.yml lm --with-registry-auth
+
+Step 9. Install LightMatrix java application
+
+In order to install tools from central matrix to light matrix, we need LightMatrix java application up and running in LightMatrix machine
+# docker --debug stack deploy --compose-file /root/lightmatrix/lightmatrixjava.yml lmjava --with-registry-auth
+
+Step 10. Install central matrix tools and sync data from project explorer of Central Matrix and then execute the workflow in LightMatrix
+
+
+Jenkins Adapter Deployment on Openshift
+Pre-requisites:
+Open shift, Gitlab, Jenkins needs to be installed before setting up the Jenkins Digimop Adapter.
+Credentails Required:
+ 1. Git to access the Git repo.
+ 2. Jenkins to copy the CI/CD pipe line script.
+ 
+Step1. Source code Details
+	Jenkins Digimop Adaptor Git Source Code is available in the below git path:
+Git URL: http://10.129.194.153/root/jenkins-digimop.git
+
+
+Step2: Project Creation at OCP
+             Create a Project in Openshift with project name “jenkins-digimop”.
+	Project: jenkins-digimop
+
+Step 3. Jenkins Job Creation steps
+                         
+
+Step 4:	Verifying the application status
+	The jenkins-digimop  will get and active pod in openshift once the CICD is done. To verify		 login to openshift and check for the project name “jenkins-digimop”. You should be viewing the below screen.  
+
+ 
+
+	
+Go to Applications-> Routs, click on the Route (Host name)  and add welcome mapping at end to verify the application actually running or not.
+
+Req: Get :http://jenkins-digimop-jenkins-digimop.haproxy.project.stagingmatrix.com/welcome
+Response : “Welcome to jenkins digimop”
+
+Step 5 : Setting route time out . 
+	In case the digimop takes more than 10 minutes, which is the default route timeout, the timeout has to be set explicitly. In case of Jenkins- digimop service, few digimops are taking more than 4 hours. We have to consider the maximum time required by any digimop in any digimop service and to be on the safer side – add some buffer time as well. So, in case of Jenkin- digimop service, we are setting the timeout as 6 hours. The following section describes the procedure to set the timeout for the route.
+
+Follow the below steps :
+	
+1. Find the route name by going to Application>Routes. Following screen will appear.
+
+
+
+
+2. Copy the route name. In this case, it is jenkins-digimop. 
+3. Login to OCP master node.
+4. Run the following command. Supported time units are microseconds (us), milliseconds (ms), seconds (s), minutes (m), hours (h), or days (d).
+oc annotate route routename --overwrite haproxy.router.openshift.io/timeout=6h
+
+In this case, the command will look like below:
+oc annotate route jenkins-digimop--overwrite haproxy.router.openshift.io/timeout=6h
+
+5. After running the above command, to verify whether the route timeout has increased, click on the route name and in the screen that appears , click on Actions dropdown>Edit YAML  as shown in the screenshot below :
+
+
+6. In the following screen, verify that in the highlighted section as shown below, timeout is reflecting.
+
+
+7. This brings us to an end of setting the timeout.
+
+Once Jenkins adapter deployment is successful, add the route in cicd_config.json as below:
+"jenkinsDigimopUrl": "<route of Jenkins adapter>",
+Appendix
+Proxy Configurations:
+Configurations Required for VM’s behind Proxy:
+If the vm or container is behind proxy we have to add proxy entries in below three files
+bash.rc file
+Add below content in the bash rc file
+export http_proxy=http://<Proxy IP>:<Proxy Port>/
+export ftp_proxy=http://<Proxy IP>:<Proxy Port>/
+export https_proxy=http://<Proxy IP>:<Proxy Port>/                      
+export no_proxy=localhost,<no host entries>
+/etc/rhsm/rhsm.conf
+Enter Proxy IP in the field proxy_hostname
+Enter proxy port in the field proxy_port
+Add no proxy entries in the no_proxy field
+/etc/yum.conf
+Add proxy 
+proxy=http://<Proxy IP>:<Proxy Port>/	
+
+Configurations Required in Ansible Inventory file:
+Please add below lines in Ansible Inventory file (/etc/ansible/hosts) when VM’s in the cloud are behind Proxy:
+openshift_http_proxy=http://<Proxy IP>:<Proxy Port>
+openshift_https_proxy=http://<Proxy IP>:<Proxy Port>
+openshift_no_proxy= localhost,<no host entries>
+
+Configurations Required for Docker:
+Please add below lines in /etc/sysconfig/docker:
+HTTP_PROXY= ‘http://<Proxy IP>:<Proxy Port>/	‘
+HTTPS_PROXY= ‘http://<Proxy IP>:<Proxy Port>/	‘
+NO_PROXY=’<no host entries>’
+
+Issues observed while deploying applications:
+Follow below procedure when pod crashes continuously with error permission denied:
+oc create serviceaccount useroot
+
+$ oc adm policy add-scc-to-user anyuid -z useroot
+
+$ oc patch dc/<deploymentname> --patch '{"spec":{"template":{"spec":{"serviceAccountName": "useroot"}}}}'
+
+Configuration Required for JIRA VM behind Proxy:
+Below proxy settings to be made in setenv.sh:
+JVM_SUPPORT_RECOMMENDED_ARGS="-Dhttp.pac.proxyHost=<proxy-ip> -Dhttp.pac.proxyPort=<proxy-port> -Dhttps.pac.proxyHost=<proxy-ip> -Dhttps.pac.proxyPort=<proxy-port>" 
+
+After adding above settings in setenv.sh JIRA should be restarted.
+
+Configuration Required for Confluence VM behind Proxy:
+In  /home/jirauser/jirasoftware/atlassian-confluence-6.6.2/bin/setenv.sh
+Add the following line to set proxy.
+
+CATALINA_OPTS="-Dhttp.pac.proxyHost=10.158.100.1 -Dhttp.pac.proxyPort=8080 -Dhttps.pac.proxyHost=10.158.100.1 -Dhttps.pac.proxyPort=8080"
+
+
+
