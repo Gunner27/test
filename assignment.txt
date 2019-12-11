@@ -1,0 +1,537 @@
+1. How many processes are currently running on your system? Which of them are using more memory/CPU (top 3 in each category)
+
+sol:-   ps u | sort -nrk 4 | head -3
+        USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+        apdev     3451  0.0  0.1   5812  3084 tty1     S    Mar12   0:00 -bash
+        apdev    26957  0.0  0.1   5864  3100 pts/0    Ss   Apr02   0:00  bash
+        apdev    26766  0.0  0.1   5864  3104 pts/1    Ss   Apr02   0:00  bash
+   
+2. How do you get the current system load (CPU/memory) of your system.
+
+sol:- uptime
+      15:00:01 up 125 days, 22:18,  8 users,  load average: 0.00, 0.00, 0.00
+  
+3. What is the order of the configuration files executed (bash profile/rc etc) when you login to the system
+ 
+sol:-  The ~/.bashrc file gets executed when you run bash using an interactive shell that is not a login shell.
+       The ~/.bash_profile only gets executed during a login shell. 
+	   
+	   When BASH is invoked as a log in shell the following files are executed in order.
+	   
+       1./etc/profile
+       2.~/.bash_profile
+       3.~/.bash_login
+       4.~/.profile
+	   
+	   execute /etc/profile
+       IF ~/.bash_profile exists THEN
+          execute ~/.bash_profile
+       ELSE
+          IF ~/.bash_login exist THEN
+             execute ~/.bash_login
+          ELSE
+             IF ~/.profile exist THEN
+             execute ~/.profile
+             END IF
+          END IF
+        END IF
+	   
+	   When BASH in invoked as a interactive non-login shell then the execution is as below.
+	   
+	   only ~/.bashrc is executed. In most cases, the default ~/.bashrc script executes the system's /etc/bashrc.
+	   
+	   if [ -f /etc/bashrc ]; then
+        ./etc/bashrc
+       fi	  
+	   
+4. How do you get the linux version, distribution version, bash version, hostname of your system.
+
+sol:-   Linux version: cat /proc/version (or) uname -a
+                       Linux version 2.6.28-19-generic (buildd@vernadsky) (gcc version 4.3.3 (Ubuntu 4.3.3-5ubuntu4) ) #66-Ubuntu SMP Sat Oct 16 17:39:04 UTC 2010
+					   2 : Kernel version
+                       6 : The major revision of the kernel
+					   28: The minor revision of the kernel
+					   19: Immediate fixing / bug fixing for critical error
+					   generic : Distribution specific sting. For example, Redhat appends string such as EL5 to indicate RHEL 5 kernel.
+
+					  
+		Distribution version: cat /etc/*release (or) lsb_release -a
+							  DISTRIB_ID=Ubuntu
+							  DISTRIB_RELEASE=9.04
+							  DISTRIB_CODENAME=jaunty
+							  DISTRIB_DESCRIPTION="Ubuntu 9.04"	
+
+        Bash version:  bash -version (or) bash --version (or) /bin/bash -version
+                       GNU bash, version 3.2.48(1)-release (i486-pc-linux-gnu)
+					   Copyright (C) 2007 Free Software Foundation, Inc.
+
+        Hostname    :  hostname -V
+		               hostname 2.95							
+					  
+5. Write a simple script that will display the directory contents. (similar to ls, without any options)
+
+sol:-  #!/bin/bash
+       #This is the program that will diplay the contents in a given directory
+       
+	   for File in *
+       do
+          if [ -r $File -a -w $File -a -x $File ]   #If a file exists and it has the read,write and execute permissions
+             then
+             echo $File
+	      fi
+       done
+   
+6. Identify what run-level you are running in. Where are the run-level scripts stored. what does "K" specify in the filename in the run-level directory.
+
+sol:-       init level										comments 
+            -----------                                  --------------
+				0							Runlevel 0 is reserved for the "shutdown" phase
+				1							Runlevel 1 is usually for very basic commands. This is the equivalent to "safe mode" used by Windows. 
+				                            This level is usually used only to asses repairs or maintenance of the system.
+				2							Runlevel 2 is used to start most of the machines services. This will allows multiple users to login to the machine.
+				3							Runlevel 3 is commonly used by servers. This loads all services except the X windows system.
+											No GUIs (KDE, Gnome) will start. This level allows multiple users to login to the machine.
+				4							Runlevel 4 is usually a "custom" level.This level is usually only used under special circumstances							
+				5							Runlevel 5 is everything! This will start any GUIs, extra services for printing, and 3rd party services. 
+											Full multi-users support also.
+				6							Runlevel 6 is reserved for "reboot" only. 
+				
+    run levels we are runningin:  chkconfig --list 
+	---------------------------	  who -r : run-level 2  2014-03-12 16:41                   last=
+								  output of who -r, we can tell that we are currently running at run-level 2–which is multi-user.
+								  We can also tell that we were previously running at run-level in last=.
+								                 (or)
+								 runlevel: N 2
+	
+	Where run-level scripts stored?:
+	-------------------------------
+	                              The Runlevels in System V describe certain states. For example:
+
+								Runlevel 0: Halt
+								Runlevel 1: Single user mode
+								Runlevel 6: Reboot
+								All System V init scripts are stored in /etc/rc.d/init.d/ or /etc/init.d directory. 
+								These scripts are used to control system startup and shutdown
+
+ 	what "k" specifies in filename:
+	------------------------------
+	Each runlevel has its own set of start(S) and kill(K) scripts but all these scripts are supported in the directory /etc/rc.d/init.d.	
+	All kill files (files whose first letter is 'K') in the subdirectory "/etc/rc.d/rc3.d" (assuming the previous runlevel was 3) are run. 
+	The parameter stop is usually passed on the command line to the kill script. 
+ 
+    lrwxrwxrwx  1 root root 10 2004-11-29 22:09 K12nfsboot -> ../nfsboot
+    lrwxrwxrwx  1 root root  6 2005-03-29 13:42 K15xdm -> ../xdm
+	
+	If the name of the link starts with a K, the service will be killed.
+
+
+7. What are the different file/directory permissions? Explain the significance of each field (from ls -l o/p)
+
+sol:  Permissions      No.of         Owner          Group         Size        Last modified date        file name
+                     hard links
+       drwxr-xr-x 	     2 		     apdev 	        apdev 	       4096 	    2014-07-10 16:31 	       vjj2
+	   -rwxr-xr-x 	     1 	         apdev 	 	    apdev           21      	2014-07-10 16:31 		    vjy			
+
+	-  - file 
+	d - directory
+	rwx- for user
+	rwx- for group
+	rwx- others	   
+					 
+8. How do you represent the permission numerically?
+9. What is umask? How does it affect the file permissions.
+
+sol:-  umask
+	   0002
+	
+       Default permissions for a file are : 666
+				          (-)0002
+					         664
+      
+	   Default permissions for a directory are : 777
+					      (-)0002
+					         775
+    r - 4
+	w - 2
+	x - 1
+	
+10. Customize your login shell so that when you login, it will show you the date/time, system load, number of users logged in. Also the Prompt should be set to the current directory.
+
+sol:- 
+
+Last login: Wed Jul 16 11:28:11 2014 from 10.125.176.41
+----- Today's Date/Time -----
+
+Wed Jul 16 11:29:31 IST 2014
+
+----- System load -----
+
+ 11:29:31 up 125 days, 18:48,  7 users,  load average: 0.00, 0.00, 0.00
+
+----- Who are logged -----
+ 11:29:31 up 125 days, 18:48,  7 users,  load average: 0.00, 0.00, 0.00
+USER     TTY      FROM              LOGIN@   IDLE   JCPU   PCPU WHAT
+apdev    tty1     -                12Mar14 125days  0.26s  0.00s vi /etc/network/interfaces
+apdev    tty7     :1               12Mar14 125days 46:27  16.62s /usr/bin/gnome-session
+root     pts/2    :2.0             13Mar14 124days  0.12s  0.12s -bash
+apdev    pts/3    10.125.176.42    09:19   13:53   1.89s  0.36s -bash
+apdev    pts/4    10.125.176.41    11:29    0.00s  0.11s  0.11s -bash
+root     pts/5    :3.0             07Apr14 99days  0.11s  0.11s -bash
+root     pts/6    :4.0             07Apr14 99days  0.12s  0.12s -bash
+
+/home/apdev> 
+
+11. Write a script that will display the free memory every 5 seconds. The script should not exit with "Control + C"
+
+sol:-
+http://tldp.org/LDP/Bash-Beginners-Guide/html/sect_12_01.html
+
+#!/bin/bash
+trap '' 2
+i="0"
+while [ $i -eq 0 ]
+do
+free -m
+sleep 5
+done
+
+(or)
+
+watch -n 5 df -h
+
+o/p:
+
+             total       used       free     shared    buffers     cached
+Mem:          2999       1965       1033          0        249       1265
+-/+ buffers/cache:        450       2548
+Swap:         8824          0       8824
+^C             total       used       free     shared    buffers     cached
+Mem:          2999       1965       1033          0        249       1265
+-/+ buffers/cache:        450       2548
+Swap:         8
+
+
+12. Write a script that will accept the username as argument to script. THe script should show the number of logins with that username, processes running with the owner as the given username.
+
+sol:-
+     #!/bin/bash
+	 user=$1
+	 echo "NUMBER OF TIMES $user LOGON TO THE SYSTEM:"
+	 w | grep "^$user" | wc  -l
+	 echo
+	 echo "PROCESSES RUNNING ON $user ARE:"
+	 ps u | grep "$user"
+	 echo
+
+13. How different are the text files created under dos and unix w.r.t the newlines? How do you convert one from the other in unix/linux? 
+
+sol:- Text files created on DOS/Windows machines have different line endings than files created on Unix/Linux. 
+      DOS uses carriage return and line feed ("\r\n") as a line ending, which Unix uses just line feed ("\n"). 
+      
+	  These are the ways to convert DOS line endings to Unix line endings.
+	  
+      using perl :- perl -p -e 's/\r$//' < winfile.txt > unixfile.txt
+	  using awk  :- awk '{ sub("\r$", ""); print }' winfile.txt > unixfile.txt
+	  
+	  we can use the utilities also like: dos2unix winfile.txt  unixfile.txt
+	                                      unix2dos unixfile.txt winfile.txt
+	  
+14. what are the common utils to compare two files? How is the output of those commands interpreted? 
+
+sol:- comm (common info) --- in this comm utility logically screen is divided into 3 parts like uncommon info,uncommon info,common info.
+          ex:comm file1 file2          (display the common info of both the files)
+             comm -1 file1 file2 	   (display the common info and uncommon info of file1)
+		     comm -2 file1 file2       (display the common info and uncommon info of file2)
+		     comm -3 file1 file2       (display the common info and uncommon info of file1 & file2)
+		  
+	  diff (different info) --- diff compares the contents of the two files from-file and to-file.
+           ex: diff mail address  (difference wii be displayed)
+               o/p:  2a3,4     This displays a line by line difference between the file email and addresses.
+                               To make these files match you need to add (a) lines 3 and 4 (3,4) of the file addresses (>) after line 2 in the file email
+		        
+      cmp (comapre the info) ----The cmp utility compares two files of any type. By default, cmp is silent if the files are the same; 
+	                             if they differ, the byte and line number at which the first difference occurred is reported. 
+                                 The cmp utility  exits with one of the following values:
+								 0 --- if files are identical.
+								 1 --- if files are different.
+								>1 --- an error occured.
+
+15. How do you run a command/script such that it should not exit even if the terminal window is closed? 
+
+sol:- cat > file1
+      sleep 20
+	  echo "hi all"
+	  echo "bye"
+	               -------Type exit or press CTRL + D exit from remote server
+      reconnect to the shell
+	  
+	  o/p:- cat nohup.out 
+	        hi all
+			bye
+
+16. What are the priority levels a process can have? What is the default priority? How do you increase/decrease it with what effect? 
+
+sol:-  "Every real-time process is associated with a real-time priority, which is a value ranging from 1 (highest priority) to 99 (lowest priority)."
+       "And the scheduling priority is generally ranges from -20 to 19 and lower the number most priority."
+       -20 being the most favorable or highest priority for scheduling and 19 being the least favorable or lowest priority.
+       
+	   Default priority level for RTP and SP is "zero".		
+
+	   The nice command can also be used to start a process with a different priority. 
+	   use the -n or (--adjustment) option with a positive value to increase the priority value and a negative value to decrease it. 
+	   Remember that processes with the lowest priority value run at highest scheduling.
+       
+	   setting priority in a newprocess:        nice -n [nice value] [command]
+	   setting priority on a existing process:  renice 10 -p 5691
+	                                            o/p: renice 10 -p 21827
+												This will increment the priority of the process with an id of 5691 to 10.
+
+17. How do you change the owner and group for a given file? 
+
+sol:-  Change the owner of a file : ls -l sample
+                                    -rw-r--r-- 1 apdev apdev 112 2014-07-03 11:29 sample
+                                    chown root sample
+                                    ls -l sample
+                                    -rw-r--r-- 1 root  apdev 112 2014-07-17 11:13 sample
+       Change the group of a file : ls -l sample
+                                    -rw-r--r-- 1 apdev apdev 112 2014-07-03 11:29 sample
+                                    chown :aditya sample
+                                    ls -l sample
+                                    -rw-r--r-- 1 root  apdev 112 2014-07-17 11:13 sample
+									
+18. What are soft links and hard links? Explain where we can use each of them. Where is one more beneficial than the other? 
+
+sol:-  http://www.maxi-pedia.com/difference+between+symbolic+link+and+hard+link
+	   A symbolic link, also termed a soft link, is a special kind of file that points to another file
+       symbolic link does not contain the data in the target file. It simply points to another entry somewhere in the file system. 
+	   creating a symbolic link: ln -s source_file myfile
+	   If you delete the source file or move it to a different location, your symbolic file will not function properly.
+	   
+	   Both Linux/UNIX allows the data of a file to have more than one name in separate places in the same file system. 
+	   Such a file with more than one name for the same data is called a hard-linked file.
+	   syntax: ln {source} {link}
+	   source is an existing file.
+       link is the file to create (a hard link).
+	   
+	   soft link:
+	   1.Link across filesystems: If you want to link files across the filesystems, you can only use symlinks/soft links.
+       2.Links to directory: If you want to link directories, then you must be using Soft links, as you can’t create a hard link to a directory.
+	   
+	   hard link:
+	   1.Hard links takes very negligible amount of space, as there are no new inodes created while creating hard links.
+       2.If you move the source file to some other location on the same filesystem, the hard link will still work, but soft link will fail.
+
+       when you delete a target file, symbolic links to that file become unusable, whereas hard links preserve the contents of the file.
+	   symbolic links has certain qualities that hard links do not have, such as the ability to link to directories,files on remote computers networked through NFS.
+
+19. Interpret all the fields in your user entry in /etc/passwd. Where is the password stored and how? 
+
+sol:-  On almost all linux distributions , user information is stored in /etc/passwd, a text file which contains, 
+	   1.the user's login 
+	   2.their encrypted password 
+	   3.a unique numerical user id (called the uid) 
+	   4.a numerical group id (called the gid) 
+	   5.an optional comment field (usually containing such items as their real name, phone number, etc.) 
+	   6.their home directory
+	   7.their preferred shell 
+	
+	   A typical entry in /etc/passwd looks something like this: 
+
+       pete:K3xcO1Qnx8LFN:1000:1000:Peter Hernberg,,,1-800-FOOBAR:/home/pete:/bin/bash
+	   apdev:x:1001:1001:apdev,,,:/home/apdev:/bin/bash
+
+	   The password actually stored in:
+	
+	   [root@slashroot1 ~]# cat /etc/shadow 
+       root:$1$Etg2ExUZ$F9NTP7omafhKIlqaBMqng1:15651:0:99999:7:::
+	
+	   Password stored in the format:
+	
+	   Hashing algorithm : $1(MD5)
+	   salt              : Etg2ExUZ(between two $ symbols)
+	   Hash value of (salt + passwrd ) : Remaining
+	
+	1. The first field is self explanatory, its the USERNAME
+	2. The second field is the encoded password (Which is a one way hash..we will be discussing this in detail)
+	3. The third field is the day's since the UNIX time that password was changed
+	4. This field specifies the number of days, that are required between password changes.
+	5.No of days after which its necessary to change the password.
+	6.This is the number of days before the required password change, the user gets a warning
+	7.If the password has expired, after this number of days the account will be disabled
+	8.No of days from the Unix Time, the account is disabled
+	9. This field is not used yet...
+	
+20. For a given executable how do you identify the libraries that it depends upon? 
+
+sol:- "ldd" is used to identify the libraries of given executable.
+       for all executables:- ldd /bin/command
+
+21. What are the ports used by telnet, ssh, scp, ftp, tftp, http, secure http? 
+
+sol:- grep telnet (configurational file)
+
+      telnet - 23
+   	  ssh    - 22
+	  scp    - 22
+	  ftp    - 20(data),21(control)
+	  tftp   - 69
+	  http   - 80
+	  https  - 443
+
+22. What is the use of /etc/hosts file? Where/how does it get used?
+
+sol:- Purpose:
+		The hosts file is one of several system facilities that assists in addressing network nodes in a computer network. 
+		As your machine gets started, it will need to know the mapping of some hostnames to IP addresses before DNS can be referenced.This mapping is kept in the /etc/hosts file.
+		It is a common part of an operating system's Internet Protocol (IP) implementation, and serves the function of translating human-friendly hostnames into numeric protocol addresses, 
+		called IP addresses, that identify and locate a host in an IP network. In some operating systems, the hosts file's content is used preferentially to other methods, such as the Domain 
+		Name System (DNS), but many systems implement name service switches (e.g., nsswitch.conf for Linux and Unix) to provide customization. Unlike the DNS, the hosts file is under the direct 
+		control of the local computer's administrator
+
+      File content:
+		The hosts file contains lines of text consisting of an IP address in the first text field followed by one or more host names. 
+		Each field is separated by white space (blanks or tabulation characters). Comment lines may be included. Entirely blank lines in the file are ignored 
+
+23. What is the use of ping and finger commands?
+
+sol:- ping:- ping command detects whether a system is up and running. If the system you want to check is down, ping issues a timeout message indicating a connection.
+			 The ping command sends an echo request to a host available on the network. Using this command you can check if your remote host is responding well or not.
+             syntax:- $ping hostname or ip-address
+			 ping 10.59.21.53
+			 PING 10.59.21.53 (10.59.21.53) 56(84) bytes of data.
+			 64 bytes from 10.59.21.53: icmp_seq=1 ttl=64 time=0.025 ms
+			 64 bytes from 10.59.21.53: icmp_seq=2 ttl=64 time=0.018 ms
+			 64 bytes from 10.59.21.53: icmp_seq=3 ttl=64 time=0.010 ms
+			 64 bytes from 10.59.21.53: icmp_seq=4 ttl=64 time=0.009 ms
+             The ping command is useful for the following:-
+                    1. Tracking and isolating hardware and software problems.
+                    2. Determining the status of the network and various foreign hosts.
+                    3. Testing, measuring, and managing networks.
+					
+	  Finger:- The finger command displays information about users on a given host. 
+	           The host can be either local or remote.finger can operate on large networks, including the Internet, though most systems block it for security reasons.
+               Finger may be disabled on other systems for security reasons.
+               syntax:- finger
+               Login     Name       Tty      Idle  Login Time   Office     Office Phone
+               apdev     apdev     *tty1     126d  Mar 12 16:48
+               apdev     apdev      tty7     126d  Mar 12 16:50 (:1)
+               apdev     apdev      pts/3       1  Jul 17 09:36 (10.125.176.41)
+               apdev     apdev      pts/4          Jul 17 15:17 (10.125.176.42)
+           
+24. What is an RPM? How many rpms are currently installed on your system? How do you install/uninstall the RPM? 
+
+sol:- The RPM Package Manager (RPM) is a powerful command line driven package management system capable of installing, uninstalling, verifying, 
+      querying, and updating software packages With root privilege, we can use the rpm command with appropriate options to manage the RPM software packages.
+
+Installing a RPM package Using rpm -i   : # rpm -i  MySQL-client-3.23.57-1.i386.rpm
+
+Query all the RPM Packages using rpm -qa: # rpm -qa | wc -l
+
+Uninstalling a RPM Package using rpm -e : # rpm -ev MySQL-client
+
+
+25. why hard links are not allowed for directories?
+
+sol:- If we were allowed to create hard link for directories, two different directories in different points in the filesystem could point to the same thing.
+	  In fact, a subdir could point back to its grandparent, creating a loop. When we are traversing, there is no way to detect that we are looping (without keeping track of inode numbers as 
+	  we traverse).
+	  Imagine we are writing the du command, which needs to recurse through subdirs to find out about disk usage. How would du know when it hit a loop? It is error prone and a 
+	  lot of bookkeeping that du would have to do, just to pull off this simple task.
+	  If we create hard link to directory, which one of the multiple parents should subdir point to? That is one of the reasons why hardlinks to directories are not allowed.
+	  If we remove any one of the directories, then the files inside the directory will be removed first(in both the directories), which cause loss of data.
+	 
+26. write a script that will prompt for username and password. The script should show the username but display "*" while entering password.
+
+sol:-   Script:
+
+		#!/bin/bash
+		echo
+		username="vijaysagar"
+		password="alliswell"
+		var="enter your password: "
+		psswrd=""
+		echo -e "enter your username:\c  "
+		read usrname
+		while read -p "$var" -r -s -n 1 char
+			do
+				if [[ $char == $'\0' ]]
+				then
+					break
+				fi
+				psswrd+=$char
+				var="*"
+			done
+		echo
+		if [[ $usrname == $username && $psswrd == $password ]]
+			then
+				echo "login is done successfully"
+		else
+			echo
+			echo "you have entered wrong credentials"
+		echo "username: $usrname"
+		echo "password: $psswrd"                                   # Just to see what we have entered
+		echo
+		fi
+
+		
+		Output:
+		
+		/home/apdev/sagar> ./psswrdmask.sh
+				
+		enter your username:vijaysagar
+		enter your password: *********
+
+		you have entered wrong credentials
+		username: vijaysagar
+		password: alliswill
+		
+		/home/apdev/sagar> 
+		
+		
+		
+27. write few lines about ELF file format
+
+sol:-	Each ELF (executable and linkable file) file is made up of one ELF header, followed by file data. The file data can include:
+			Program header table, describing zero or more segments
+			Section header table, describing zero or more sections
+		The segments contain information that is necessary for runtime execution of the file, while sections contain important data for linking and relocation.
+        
+28. What is the use of /etc/hosts file? Where/how does it get used?
+
+sol:-   when ever our system gets started, it will need to know the mapping of some hostnames with corresponding IP addresses. This mapping is kept in /etc/hosts file.
+        It is a common part of an operating system's Internet Protocol (IP) implementation, and serves the function of translating human-friendly hostnames into 
+		numeric protocol addresses,called IP addresses, that identify and locate a host in an IP network.
+		
+		
+					/home/apdev> vi /etc/hosts
+		
+					127.0.0.1       3upc210-desktop localhost.localdomain   localhost
+					127.0.1.1       3upc206-desktop
+
+					# The following lines are desirable for IPv6 capable hosts
+					::1     ip6-localhost ip6-loopback
+					fe00::0 ip6-localnet
+					ff00::0 ip6-mcastprefix
+					ff02::1 ip6-allnodes
+					ff02::2 ip6-allrouters
+					ff02::3 ip6-allhosts
+		
+		
+		The leftmost column is the IP address to be resolved. The next column is that host's name. Any subsequent columns are alias for that host.
+		
+
+29. what are the directory permissions?
+
+sol:-	Permissions of directory are unlike permissions of file:
+		(-x)	Execute permission is required for a user to cd into a directory.
+				Execute-only permission allows a user to access the files in a directory as long as the user knows the names of the files in the directory, and the user is allowed 
+				to read the files.
+		(-r)	Read permission is required for a user to use a command such as ls to view the files contained in a directory.
+		(-w)	Write permission allows the user to create, delete, or modify any files or subdirectories, even if the file or subdirectory is owned by another user.
+		
+
+
+	 
+
+
+

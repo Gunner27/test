@@ -1,0 +1,73 @@
+Bash/linux questions
+1. How many processes are currently running on your system? Which of them are using more memory/CPU (top 3 in each category)
+2. How do you get the current system load (CPU/memory) of your system.
+3. What is the order of the configuration files executed (bash profile/rc etc) when you login to the system
+4. How do you get the linux version, distribution version, bash version, hostname of your system.
+5. Write a simple script that will display the directory contents. (similar to ls, without any options)
+6. Identify what run-level you are running in. Where are the run-level scripts stored. what does "K" specify in the filename in the run-level directory.
+7. What are the different file/directory permissions? Explain the significance of each field (from ls -l o/p)
+8. How do you represent the file/directory permissions numerically?
+9. What is umask? How does it affect the file permissions.
+10. Customize your login shell so that when you login, it will show you the date/time, system load, number of users logged in. Also the Prompt should be set to the current directory.
+11. Write a script that will display the free memory every 5 seconds and should exit afte 1 min. The script should not exit with "Control + C"
+12. Write a script that will accept the username as argument to script. THe script should show the number of logins with that username, processes running with the owner as the given username.
+13. how different are the text files created under dos and unix w.r.t the newlines? How do you convert one from the other in unix/linux?
+14. what are the common utils to compare two files? How is the output of those commands interpreted?
+15. How do you run a command/script such that it should not exit even if the terminal window is closed?
+16. What are the priority levels a process can have? What is the default priority? How do you increase/decrease it with what effect?
+17. How do you change the owner and group for a given file?
+18. What are soft links and hard links? Explain where we can use each of them. Where is one more beneficial than the other?
+19. Interpret all the fields in your user entry in /etc/passwd and /etc/shadow. Where is the password stored and how?
+20. For a given executable how do you identify the libraries that it depends upon?
+21. What are the ports used by telnet, ssh, scp, ftp, tftp, http, secure http?
+22. What is the use of ping, arp and finger commands
+23. What is the use of /etc/hosts file? Where/how does it get used?
+24. What is an RPM? How many rpms are currently installed on your system? How do you install/uninstall the RPM?
+25. Why Hardlinks are not allowed for directories
+26. Write a script that will prompt for username and password. The password should be hidden from user while entering on the terminal. The entered credentials should be validated against a hard-coded username and password and the result displayed as Authenticated successfully / Authentication failed.
+27. What is the use of known_hosts file w.r.t ssh.
+28. Given a file on the system, how to identify which RPM it came from?
+29. How do you identify how many processors, cores are present on your system.
+30. How to set a process to run on a particular processor/core?
+31. How to know which core a process is running on?
+32. HOw to read the CPU load of each individual core.
+33. How to know the list of files, sockets etc opened by a given process.
+34. What are the options of du, df and free. Where are they used.
+35. What is the significance of "buffers/cache" field in the "free" command output. 
+36. WHat is "endian-ness". How to identify if the system is little or big endian. What is the difference b/w the two w.r.t storing in memory.
+37. What does it mean to say that the system is 32-bit or 64 bit. How to identify if the system is 32 bit or 64 bit.
+38. HOw to set the system date and make it persistent.
+39. Between cmp and diff, which is the preferred one to see if the given two files differ?
+40. Why do people use "grep -v grep" while searching for a process name in the ps output? Can it be avoided?
+41. How to reverse the lines in a file? ie the starting line should become the last line and so on..
+42. Difference between pwd -P and pwd -L.
+43. HOw to remove mulitple occurrences of all the words in a file. (only one entry should be left out, the duplicates should be removed).
+44. How to remove the extension of a given file.
+45. HOw to convert all lower case letters in a file to upper case?
+46. How to reverse the contents of a given file - character level. ie. the first character should be last character in the reversed file.
+47. How to display 5 lines starting with 8th line.
+48. WHat happens if the first line of the shell script is #!/bin/cat ?
+49. What are $1, $2 etc in a script? How to make the second argument as the first argument?
+50. What is the use of dirname and basename?
+51. A File contains a list of emp name and their salary with name and salary separated by space, one emp details on a single line. How to sort this file w.r.t salary?
+52. Sometimes kill -9 <PID> doesn't kill the process. What could be the reason ?
+53. How would you know when the system was first installed?
+54. How to know the list of all open files on the system? Is there a way to list the files that have been opened by any process under a given directory?
+55. find files modified in the last 1 min on the system.
+56. Inspect any core file on any MED/CSL setups. Check the size of file by du and ls -l command outputs. Is there any difference. Can you justify if the size differs?
+57. Write a script to identify all the directories using more than 1GB disk space.
+58. What is IFS. How does it matter in reading file contents in bash.
+59. How to execute a script present on another system from current system? 
+60. Can we execute the script residing on the current system on a remote system? Is there a way to pass arguments to this script?
+61. Explain about the "s" permission bit on a file.
+62. What is the sticky bit w.r.t permissions of a file and where is it used?
+63. What happens if I run "exec ls" from bash?
+64. WHat does "ls >file 2>&1" mean?
+65. write a script that identifies if the given string is a palindrome or not?
+66. Write a script which does the following: For all the files in a directory, add an extension of 'alien' to the files that do not have any extension.
+67. Remove all empty lines from the given file.
+68. WHat are the different timestamps associated with a given file?
+69. List only the files in a given directory. (skip all sub-dirs)
+70. Print the entire file using "grep" command.
+71. File1 contains the list of employees (one per line). File2 contains their salaries (one per line). How do you combine these both?
+72. Rename a group of files from .txt to .exe in a given directory.

@@ -1,0 +1,3839 @@
+chapter 1-3 :-
+-----------
+
+1.I/O Redirection                         ------>http://www.tutorialspoint.com/unix/unix-io-redirections.htm
+------------------
+Most Unix system commands take input from your terminal and send the resulting output back to your terminal. 
+A command normally reads its input from a place called standard input, which happens to be your terminal by default. 
+Similarly, a command normally writes its output to standard output, which is also your terminal by default.
+
+Output Redirection:
+-------------------
+The output from a command normally intended for standard output can be easily diverted to a file instead. This capability is known as output redirection:
+
+If the notation > file is appended to any command that normally writes its output to standard output, the output of that command will be written to file instead of your terminal:
+
+Check following who command which would redirect complete output of the command in users file.
+
+$ who > users
+Notice that no output appears at the terminal. This is because the output has been redirected from the default standard output device into the specified file.
+If you would check users file then it would have complete content:
+
+$ cat users
+oko         tty01   Sep 12 07:30
+ai          tty15   Sep 12 13:32
+ruth        tty21   Sep 12 10:10
+pat         tty24   Sep 12 13:07
+steve       tty25   Sep 12 13:03
+$
+If a command has its output redirected to a file and the file already contains some data, that data will be lost. Consider this example:
+
+$ echo line 1 > users
+$ cat users
+line 1
+$
+You can use >> operator to append the output in an existing file as follows:
+
+$ echo line 2 >> users
+$ cat users
+line 1
+line 2
+$
+Input Redirection:
+-----------------
+Just as the output of a command can be redirected to a file, so can the input of a command be redirected from a file. 
+As the greater-than character > is used for output redirection, the less-than character < is used to redirect the input of a command.
+
+The commands that normally take their input from standard input can have their input redirected from a file in this manner. 
+For example, to count the number of lines in the file users generated above, you can execute the command as follows:
+
+$ wc -l users
+2 users
+$
+Here it produces output 2 lines. You can count the number of lines in the file by redirecting the standard input of the wc command from the file users:
+
+$ wc -l < users
+2
+$
+Note that there is a difference in the output produced by the two forms of the wc command. 
+In the first case, the name of the file users is listed with the line count; in the second case, it is not.
+
+In the first case, wc knows that it is reading its input from the file users. 
+In the second case, it only knows that it is reading its input from standard input so it does not display file name.
+
+Here Document:
+-------------
+A here document is used to redirect input into an interactive shell script or program.
+
+We can run an interactive program within a shell script without user action by supplying the required input for the interactive program, or interactive shell script.
+
+The general form for a here document is:
+
+command << delimiter
+document
+delimiter
+Here the shell interprets the << operator as an instruction to read input until it finds a line containing the specified delimiter. 
+All the input lines up to the line containing the delimiter are then fed into the standard input of the command.
+
+The delimiter tells the shell that the here document has completed. 
+Without it, the shell continues to read input forever. The delimiter must be a single word that does not contain spaces or tabs.
+
+Following is the input to the command wc -l to count total number of line:
+
+$wc -l << EOF
+	This is a simple lookup program 
+	for good (and bad) restaurants
+	in Cape Town.
+EOF
+3
+$
+You can use here document to print multiple lines using your script as follows:
+
+#!/bin/sh
+
+cat << EOF
+This is a simple lookup program 
+for good (and bad) restaurants
+in Cape Town.
+EOF	
+This would produce following result:
+
+This is a simple lookup program
+for good (and bad) restaurants
+in Cape Town.
+
+The following script runs a session with the vi text editor and save the input in the file test.txt.
+
+#!/bin/sh
+
+filename=test.txt
+vi $filename <<EndOfCommands
+i
+This file was created automatically from
+a shell script
+^[
+ZZ
+EndOfCommands
+If you run this script with vim acting as vi, then you will likely see output like the following:
+
+$ sh test.sh
+Vim: Warning: Input is not from a terminal
+$
+After running the script, you should see the following added to the file test.txt:
+
+$ cat test.txt
+This file was created automatically from
+a shell script
+$
+Discard the output:
+Sometimes you will need to execute a command, but you don't want the output displayed to the screen. 
+In such cases you can discard the output by redirecting it to the file /dev/null:
+
+$ command > /dev/null
+Here command is the name of the command you want to execute. The file /dev/null is a special file that automatically discards all its input.
+
+To discard both output of a command and its error output, use standard redirection to redirect STDERR to STDOUT:
+$ command > /dev/null 2>&1
+
+Here 2 represents STDERR and 1 represents STDOUT. You can display a message on to STDERR by redirecting STDIN into STDERR as follows:
+$ echo message 1>&2
+
+Redirection Commands:
+Following is the complete list of commands which you can use for redirection:
+
+Command	Description
+pgm > file	Output of pgm is redirected to file
+pgm < file	Program pgm reads its input from file.
+pgm >> file	Output of pgm is appended to file.
+pgm >> file	Output of pgm is appended to file.
+n > file	Output from stream with descriptor n redirected to file.
+n >> file	Output from stream with descriptor n appended to file.
+n >& m	Merge output from stream n with stream m.
+n <& m	Merge input from stream n with stream m.
+<< tag	Standard input comes from here through next tag at start of line.
+|	Takes output from one program, or process, and sends it to another.
+Note that file descriptor 0 is normally standard input (STDIN), 1 is standard output (STDOUT), and 2 is standard error output (STDERR).
+
+2.  Arrays/maps                     ------->http://www.tutorialspoint.com/unix/unix-using-arrays.htm
+-----------------
+
+A shell variable is capable enough to hold a single value. This type of variables are called scalar variables.
+
+Shell supports a different type of variable called an array variable that can hold multiple values at the same time. 
+Arrays provide a method of grouping a set of variables. Instead of creating a new name for each variable that is required, 
+you can use a single array variable that stores all the other variables.
+
+All the naming rules discussed for Shell Variables would be applicable while naming arrays.
+
+Defining Array Values:
+The difference between an array variable and a scalar variable can be explained as follows.
+
+Say that you are trying to represent the names of various students as a set of variables. Each of the individual variables is a scalar variable as follows:
+
+NAME01="Zara"
+NAME02="Qadir"
+NAME03="Mahnaz"
+NAME04="Ayan"
+NAME05="Daisy"
+We can use a single array to store all the above mentioned names. Following is the simplest method of creating an array variable is to assign a value to one of its indices. This is expressed as follows:
+
+array_name[index]=value
+Here array_name is the name of the array, index is the index of the item in the array that you want to set, and value is the value you want to set for that item.
+
+As an example, the following commands:
+
+NAME[0]="Zara"
+NAME[1]="Qadir"
+NAME[2]="Mahnaz"
+NAME[3]="Ayan"
+NAME[4]="Daisy"
+If you are using ksh shell the here is the syntax of array initialization:
+
+set -A array_name value1 value2 ... valuen
+If you are using bash shell the here is the syntax of array initialization:
+
+array_name=(value1 ... valuen)
+Accessing Array Values:
+After you have set any array variable, you access it as follows:
+
+${array_name[index]}
+Here array_name is the name of the array, and index is the index of the value to be accessed. Following is the simplest example:
+
+#!/bin/sh
+
+NAME[0]="Zara"
+NAME[1]="Qadir"
+NAME[2]="Mahnaz"
+NAME[3]="Ayan"
+NAME[4]="Daisy"
+echo "First Index: ${NAME[0]}"
+echo "Second Index: ${NAME[1]}"
+This would produce following result:
+
+$./test.sh
+First Index: Zara
+Second Index: Qadir
+You can access all the items in an array in one of the following ways:
+
+${array_name[*]}
+${array_name[@]}
+Here array_name is the name of the array you are interested in. Following is the simplest example:
+
+#!/bin/sh
+
+NAME[0]="Zara"
+NAME[1]="Qadir"
+NAME[2]="Mahnaz"
+NAME[3]="Ayan"
+NAME[4]="Daisy"
+echo "First Method: ${NAME[*]}"
+echo "Second Method: ${NAME[@]}"
+This would produce following result:
+
+$./test.sh
+First Method: Zara Qadir Mahnaz Ayan Daisy
+Second Method: Zara Qadir Mahnaz Ayan Daisy
+
+
+3.  Signal handling 				------->http://www.alexonlinux.com/signal-handling-in-linux#what_are_signals?
+---------------------
+
+What are signals?
+-----------------
+Signal is a notification, a message sent by either operating system or some application to your program (or one of its threads).
+Each signal identified by a number, from 1 to 31. Signals don’t carry any argument and their names are mostly self explanatory. 
+For instance SIGKILL or signal number 9 tells the program that someone tries to kill it.
+
+Signal as interrupt
+-------------------
+In addition to informative nature of signals, they also interrupt your program. 
+i.e to handle a signal, one of the threads in your program,stops its execution and temporarily switches to signal handler. 
+Note that as in version 2.6 of Linux kernel, most of the signals interrupt only one thread and not the entire application as it used to be once. 
+Moreover, signal handler itself can be interrupted by some other signal.
+
+Signal masks
+-------------
+Each one of signals can be in one of three states:
+
+We may have our own signal handler for the signal.
+Signal may be handled by the default handler. Every signal has its default handler function. For instance, SIGINT default handler will terminate your application.
+Signal may be ignored. Ignoring signal sometimes referred to as blocking signal.
+When manipulating signals and managing signal configuration, it is often easier to manage a so called signal mask. 
+It is a bit-mask, where each bit has a corresponding signal. There are 32 (actually 31, 0 doesn’t count) different signals, 
+thus we can use single 32-bit integer (unsigned int) to keep information about 32 signals. 
+This is exactly what operating system does. Moreover, signal masks used as arguments in different system calls, thus we will have to work with signal masks.
+
+Other uses of signals
+---------------------
+Signals have several different usages. For instance debuggers rely on signals to receive events about programs that being debugged. 
+Signals is one of so called IPC – Inter Process Communication mechanisms. IPC used to, as the abbreviation implies, to allow processes communicate with one another.
+Another common use is when user wishes that our program will reinitialize itself, but not terminate. 
+In this case, user can send our program a signal from the terminal, using a program called kill. 
+You may be already familiar with this program. It used to kill processes.
+The truth is that it sends a signal. Each signal has a number that identifies it. By default it sends signal 15, SIGTERM, but it can send just any signal.
+
+
+4.  Positional parameters 
+--------------------------
+when you want to give arguments to scripts then arguments are reflected as the positional parameters inside the script.
+Most relevant special parameters are described below:
+$0                                 the first positional parameter
+$FUNCNAME                          the function name (attention: inside a function, $0 is still the $0 of the shell, not the function name)
+$1....$9	                       the argument list elements from 1 to 9
+$*(or)$@                           all positional parameters,except $0
+$#                                 the number of arguments,not counting $0       
+
+$* is all parameters as a single word, $@ is all parameters as individual quoted string. "$@" corresponds to "$1" "$2" "$3" etc. "$*" corresponds to "$1 $2 $3".      
+$0 is not a positional parameter,it's a special parameter independent from the real parameter list.In the ideal case it's the pathname of the script.
+
+2. Shifting :
+-------------
+The builtin command shift is used to change the positional parameter values.
+$1 will be discarded
+$2 will become $1
+$3 will become $2
+…
+in general: $N will become $N-1
+The command can take a number as argument: How many positions to shift. So, a shift 4 will shift $5 to $1.
+
+3. All positional parameters :
+----------------------------
+$*	     $1 $2 $3 … ${N}
+$@	     $1 $2 $3 … ${N}
+"$*"	 "$1c$2c$3c…c${N}"
+"$@"	 "$1" "$2" "$3" … "${N}"
+
+4. Range of positional parameters :
+----------------------------------
+Another way of expanding the positional parameters is as below.
+
+${@:START:COUNT}
+
+${*:START:COUNT}
+
+"${@:START:COUNT}"
+
+"${*:START:COUNT}"
+
+The rules for using @ or * and the quoting are the same.This will expand COUNT number of positional parameters starting at START. 
+COUNT can be omitted (${@:START}), in this case all positional parameters beginning at START are expanded. 
+If START is negative, the positional parameters are numbered from the last one backwards.
+COUNT may not be negative, so elements are always counted in the forward direction.
+
+5. Setting positional parameters:
+---------------------------------
+The "set built-in command" can be used to "artificially" change the positional parameters from inside the script or function.
+ex:- set "This is" my new "set of" positional parameters
+     # RESULTS IN
+     # $1: This is
+     # $2: my
+     # $3: new
+     # $4: set of
+     # $5: positional
+     # $6: parameters
+
+
+5.  Variable expansion                http://wiki.bash-hackers.org/syntax/pe         https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html
+-----------------------
+One of the core functionality of bash is to manage the paremeters. A parameter is an entity that stores the values and it is refered by name,
+number or any other special symbol.
+  1. Parameters referenced by a name are called as "variables"
+  2. Parameters referenced by a number are called as "positional parameters"
+  3. Parameters referenced by a special symbol are auto-set parameters.
+
+Parameter expansion is the procedure to get the value from the referenced entity, like expanding a variable to print its value.
+
+1. Simple Usage:-
+----------------
+The easiest form is to just use a parameter's name within braces.
+ex:-  echo "The plural of $WORD is most likely $WORDs"
+      echo "The plural of $WORD is most likely ${WORD}s" 					 
+In the first scenario,it prints nothing, because a parameter (variable) named "WORDs" is undefined and thus printed as "" (nothing).
+Without using braces for parameter expansion, Bash will interpret the sequence of all valid characters from the introducing "$" up to the last valid- 
+character as name of the parameter. When using braces you just force Bash to only interpret the name inside your braces.				
+  Simple usage for arrays:-
+  -----------------------
+  For arrays you always need the braces. The arrays are expanded by individual indexes.
+  ${array[5]}
+  ${array[*]}
+  ${array[@]}  
+  
+2. Variable Name Expansion:-
+--------------------------  
+This expands to a list of all set variable names beginning with the string PREFIX.The below example will show all defined variable names beginning with "BASH".
+ex:- echo ${!BASH*} (or) echo ${!BASH@}
+BASH BASH_ARGC BASH_ARGV BASH_COMMAND BASH_COMPLETION BASH_COMPLETION_DIR BASH_LINENO BASH_SOURCE BASH_SUBSHELL BASH_VERSINFO BASH_VERSION
+
+3. Sub-string Removal:-
+----------------------
+This one can expand only a part of a parameter's value, given a pattern to describe what to remove from the string. 
+    
+  1.From the beginning:  ( ${PARAMETER#PATTERN} and ${PARAMETER##PATTERN} )
+  -------------------
+  This form is to remove the described pattern trying to match it from the beginning of the string. 
+  The operator "#" will try to remove the shortest text matching the pattern, while "##" tries to do it with the longest text matching.
+  ex:- MYSTRING="Be liberal in what you accept, and conservative in what you send"
+       echo ${MYSTRING#* }           O/P:- liberal in what you accept, and conservative in what you send
+	   echo ${MYSTRING##* }          O/P:- send
+  2.From the ending:    ( ${PARAMETER%PATTERN} and ${PARAMETER%%PATTERN} )
+  ------------------
+  In the second form everything will be the same, except that Bash now tries to match the pattern from the end of the string.
+  ex:  echo ${MYSTRING% *}	         O/P:- Be liberal in what you accept, and conservative in what you 
+       echo ${MYSTRING%% *}	         O/P:- Be 
+
+4. String Length:-
+------------------
+When you use this form, the length of the parameter's value is expanded.
+ex:- echo ${#MYSTRING}…              O/P:- 64   	   
+
+5. Use a default value:-
+------------------------
+${parameter:-word}
+Use Default Values. If parameter is unset or null, the expansion of word is substituted. Otherwise, the value of parameter is substituted.
+
+ex:-  A=''
+      echo "${A:-2}"
+      2
+      echo "$A"
+     (empty)
+6. Assign a default value:-
+--------------------------
+${parameter:=word}
+Assign Default Values. If parameter is unset or null, the expansion of word is assigned to parameter. The value of parameter is then substituted. 
+Positional parameters and special parameters may not be assigned to in this way.	 
+
+ex:- A=''
+     echo "${A:=2}"
+     2
+     echo "$A"
+     2
+
+	 
+
+6.  Creating libraries (sourcing files) :-  https://github.com/Dieterbe/libui-sh  http://steve-parker.org/sh/functions.shtml  https://code.google.com/p/bsfl/
+----------------------------------------
+what is a library?
+------------------
+The Bash Shell Function Library (BSFL) is a small Bash script that acts as a library for bash scripts. BSFL is created because we often wrote the same functions 
+in every new script. So,some of these re-occurring functions are put into BSFL. BSFL provides some simplified functions for various functions such as tests, 
+logging and presenting information in a nice format. 
+
+Library creation:
+----------------
+One often-overlooked feature of Bourne shell script programming is that you can easily write functions for use within your script. When writing a suite of scripts,
+it is easier to write a "library" of useful functions, and source that file at the start of the other scripts which use the functions.
+we will use ". ./library.sh" at the start of the script.
+
+Ex:- COMMON LIB
+     -----------
+      # common.lib
+	  # Note no #!/bin/sh as this should not spawn an extra shell.
+	 
+	    STD_MSG="About to rename some files..."
+
+	    rename()
+		{
+		   # expects to be called as: rename .txt .bak 
+		   FROM=$1
+		   TO=$2
+
+		   for i in *$FROM
+		   do
+			j=`basename $i $FROM`
+			mv $i ${j}$TO
+		   done
+		}
+
+      FUNCTION2.sh
+	  ------------
+	  #!/bin/sh
+      # function2.sh
+      . ./common.lib
+      echo $STD_MSG
+      rename txt bak
+ 
+      o/p:- About to rename some files...
+      $ls  (all .txt files are converted to .bak files)
+      case.sh.bak  disktest.sh.bak  employee.bak  ifelse.sh.bak  mysystem.sh.bak  nestedif.sh.bak  penguin.sh.bak  student.bak  unixfile.bak  w.bak  weight.sh.bak  work1.bak  wrk.bak
+
+Here we see two user shell scripts function2.sh & function3.sh each sourceing the common library file common.lib,and using variables and functions declared in that file.
+ 
+ 
+ 
+7.  Command substitution :-
+-------------------------- 
+what is command substitution?
+-----------------------------
+Command substitution means nothing more but to run a shell command and store its output to a variable or display back using echo command.
+Command substitution allows the output of a command to replace the command itself. 
+There are two syntaxes for command substitution:
+
+   Basic syntax:  $( any Unix command goes between parentheses )
+   Old syntax:    `  any Unix command goes between back-quotes `
+   
+The new syntax is used by modern shells (ksh, bash).  The old syntax is
+used by older Bourne shells and by the C shell (csh, tcsh).   
+
+The command substitution expands to the output of commands. These commands are executed in a subshell, and the ouput is directed to stdout. so that we can use that output. 
+ex: echo `date`  or  echo $(date)
+    Wed Jul 23 12:42:32 IST 2014
+	
+When the old-style backquoted form of substitution is used, backslash retains its literal meaning except when followed by "$", "`", or "\".
+The first backticks not preceded by a backslash terminates the command substitution.
+When using the "$(COMMAND)" form, all characters between the parentheses make up the command none are treated specially.
+
+In general you really should only use the form $(), it's escaping-neutral,nestable and also POSIX.
+In general, the $() should be the preferred method:
+
+it's clean syntax
+it's intuitive syntax
+it's more readable
+it's nestable
+its inner parsing is separate
+
+variable vs command substitution :
+--------------------------------
+Unix shell Command Substitution is similar to variable substitution in that some text is being interpolated into the shell command line before a command is run. 
+Variable substitution looks like this:
+   $ x='hello there'
+   $ echo "and I said $x to her"
+   and I said hello there to her
+
+In Unix shell Command Substitution, it is the standard output of a Unix command line that is substituted.The command line is executed and all the standard output is 
+captured and becomes the result of the substitution in the command line before it is executed by the shell:
+
+   $ echo "the date is $(date) today"
+   the date is Wed Jul 23 13:14:00 IST 2014 today
+
+   $ echo "the passwd file has $(wc -l </etc/passwd) lines"
+   the passwd file has 35 lines
+
+8.  Mathematical expressions :
+----------------------------
+In order to perform arithmatic operations on Bash shell variables, we have built in commands like "let" and also external commands like "expr" and "bc".
+Arithmetic expansion and evaluation is done by placing an integer expression using the following format:
+		
+			$((expression))
+			$(( n1+n2 ))
+			$(( n1/n2 ))
+			$(( n1-n2 ))
+			
+			ex1:
+			echo $(( 10 + 5 ))       
+			o/p: 15
+			
+		Mathematical operators:
+		    +					addition
+			-					subtraction
+			/					division
+			*					multiplication
+			%					modulus
+			++					post increment
+			--					post decrement
+			**					exponential
+			
+		Logical operators:	
+			<< >>  				left and right bitwise shifts
+			! ~    				logical and bitwise negation
+			<= >= < >			comparison
+			== !=  				equality and inequality
+			&      				bitwise AND
+			^      				bitwise exclusive OR
+			|      				bitwise OR
+			&&     				logical AND
+			||     				logical OR
+			expr?expr:expr		conditional operator
+              
+			  
+		**** Arithmetic in BASH is integer math only. We can't do floating point math in Bash.
+		
+		let command:
+		------------
+		It tells the Bash to treat the numbers as integers instead of strings.
+		ex2:
+			/home/apdev/sagar> let a=10+20
+			/home/apdev/sagar> echo "a= $a"
+			a= 30
+			
+		expr Command:
+		-------------
+		Syntax: expr (expression)
+		ex3:
+			/home/apdev/sagar> echo `expr 10 + 20`
+			30
+			
+		bc command:
+		-----------
+		/home/apdev/sagar> bc
+		10+10
+		20
+		20*10
+		200
+		20-45
+		-25
+              
+9.  Process substitution:-     http://unix.stackexchange.com/questions/17107/process-substitution-and-pipe?answertab=votes#tab-top
+--------------------------
+why & what is process substitution?
+-----------------------------------
+Piping the stdout of a command into the stdin of another is a powerful technique. But, what if you need to pipe the stdout of multiple commands? 
+This is where process substitution comes in. Process substitution feeds the output of a process (or processes) into the stdin of another process.
+
+Process substitution uses /dev/fd/<n> files to send the results of the process(es) within parentheses to another process.
+There is no space between the the "<" or ">" and the parentheses. Space there would give an error message.
+
+ex:-	/home/apdev/aditya> echo >(ls)
+		/dev/fd/63
+        /home/apdev/aditya> \      
+         adi]         boolean.sj   cobblerfile  disktest.sh      file          ifelse.sh         manoj            nohup.out         
+          1            aditya        casemo       colour       disktest.sh      file.sh       ifelse.sh.txt      myweight.sh
+         123          aditya.awk     casemod    common.lib      installed         mycal            12345           case.sh
+		/home/apdev/aditya> echo <(ls)
+		/dev/fd/63
+		The output of the ls-program can then be accessed by reading the file /dev/fd/63.
+		
+Newer systems provide a directory named /dev/fd whose entries are files named 0,1,2,and so on.
+The file descriptors use the naming convention /dev/fd/0,/dev/fd/1,/dev/fd/2 and so on up to any number.
+
+Process substitution can compare the output of two different commands, or even the output of different options to the same command.
+ex:- /home/apdev/aditya> comm <(ls -l) <(ls -al)
+	 total 684
+     -rwxrwxrwx 1 apdev apdev    89 2014-07-11 16:52 work1.txt
+	 -rw-r--r-- 1 apdev apdev     1 2014-07-21 10:54 wrk.txt
+	 -rw-r--r-- 1 apdev apdev    61 2014-07-21 10:54 w.txt
+	 total 772
+	 drwxr-xr-x  4 apdev apdev  4096 2014-07-23 17:29 .
+	 drwxrwxrwx 85 apdev apdev 12288 2014-07-23 13:07 ..
+	 -rw-r--r--  1 apdev apdev   112 2014-07-03 11:29 \
+	 
+What can process substitution do, but pipe cannot?
+--------------------------------------------------	 
+In spite of the visual similarity in use of the < character, it does something very different than a redirect or pipe.
+Ex:- /home/apdev/aditya>   date | cat 
+                             Thu Jul 24 10:04:26 IST 2014
+This is a pointless example but it shows that cat accepted the output of date` on STDIN and display it back out. 
+
+The same results can be achieved by process substitution as below.
+Ex:- /home/apdev/aditya>   cat <(date)
+                             Thu Jul 24 10:18:07 IST 2014
+Instead of being given a STDIN stream, cat was actually passed the name of a file that it needed to go open and read. You can see this step by using echo instead of cat.
+     /home/apdev/aditya>   echo <(date)
+						     /dev/fd/63
+
+When cat was passed the file name it read it's contents for us, but echo just showed us the name that it was passed. 
+Ex:- /home/apdev/aditya>   cat <(date) <(date) <(date)
+						     Thu Jul 24 10:21:17 IST 2014
+						     Thu Jul 24 10:21:17 IST 2014
+						     Thu Jul 24 10:21:17 IST 2014
+     /home/apdev/aditya>   echo <(date) <(date) <(date)
+                             /dev/fd/63 /dev/fd/62 /dev/fd/61
+It is possible to combine process substitution (which generates a file) and input redirection (which connects a file to STDIN):							 
+Ex:  /home/apdev/aditya>   cat < <(date) 
+                             Thu Jul 24 11:05:48 IST 2014
+It looks pretty much the same but this time cat was passed STDIN stream instead of a file name. 
+Ex:  /home/apdev/aditya>   echo < <(date)
+                             <blank>
+Since echo doesn't read STDIN and no argument was passed, we get nothing.							 
+							 
+							 
+10. Conditional statements:-        https://linuxacademy.com/blog/linux/conditions-in-bash-scripting-if-statements/
+---------------------------
+If you use bash for scripting you will undoubtedly have to use conditions a lot like if,if/then/else,if/then/elif/else,nested if and case etc...conditional statements.
+IF statements:
+-------------
+If we need to specify different courses of action to be taken in a shell script, depending on the success or failure of a command then "if" comes into picture.
+Syntax of IF statement is:
+-------------------------
+  if <condition>
+  then
+  <commands>
+  fi
+
+The condition is depending on its type,surrounded by certain brackets.
+You can add commands to be executed when the condition is false using the "else" keyword, and use the "elif (elseif)" keyword to execute commands on another condition- 
+if the primary condition is false. The "else" keyword always comes last.
+
+  if <CONDITION>; then
+  <COMMANDS>;
+  elif MORE-TEST-COMMANDS; then
+  MORE-CONSEQUENT-COMMANDS;
+  else ALTERNATE-CONSEQUENT-COMMANDS;
+  fi
+  
+EX:- #!/bin/bash
+	 # This script will test if we're in a leap year or not.
+	 year=`date +%Y`
+	 if [ $[$year % 400] -eq "0" ]; then
+	    echo "This is a leap year. February has 29 days."
+	 elif [ $[$year % 4] -eq 0 ]; then
+	    if [ $[$year % 100] -ne 0 ]; then
+	       echo "This is a leap year, February has 29 days."
+	    else
+	       echo "This is not a leap year. February has 28 days."
+	    fi
+	 else
+	    echo "This is not a leap year. February has 28 days."
+     fi
+
+o/p:- /home/apdev/aditya> ./testleap.sh
+                          This is not a leap year. February has 28 days.
+
+Basic rules of condition:
+-------------------------
+When you start writing and using your own conditions, there are some rules you should know to prevent getting errors.
+
+1. Always keep spaces between the brackets and the actual check/comparison.
+   ex: if [$foo -ge 3]; then 
+       the above condition won't work. Bash will complain about a “missing `]’”.
+
+2. Always terminate the line before putting a new keyword like “then”.	   
+   The words if, then, else, elif and fi are shell keywords, meaning that they cannot share the same line.
+   Put a “;” between the previous statement and the keyword or place the keyword on the start of a new line. 
+ 
+3. It is a good habit to quote string variables if you use them in conditions.
+   ex: if [ "$string" == "aditya" ]; then  
+   
+4. You can invert a condition by putting an “!” in front of it. Example:
+   ex: if [ ! -f regularfile ]; then     (Be sure to place the “!” inside the brackets!)
+   
+5. You can combine conditions by using certain operators.  For the single-bracket syntax that we’ve been using so far, you can use “-a” for and and “-o” for or. 
+   ex: if [ $foo -ge 3 -a $foo -lt 10 ]; then
+
+Different Condition syntaxes:
+-----------------------------
+Bash features different syntaxes for conditions.
+
+1. Single-bracket syntax:
+-------------------------
+it’s the oldest supported syntax. It supports three types of conditions:
+
+1. File-based conditions :- Allows different kinds of checks on a file.
+                            ex: if [ -L symboliclink ]; then   
+
+2. String-based condition:- Allows checks on a string and comparing of strings.
+							ex: if [ -z "$emptystring" ]; then
+								if [ "$stringvar1" == "cheese" ]; then
+
+3. Arithmetic conditions :- Allows comparing integer numbers.
+							ex: if [ $num -lt 1 ]; then
+						
+2.Double-bracket syntax:
+------------------------
+The double-bracket syntax serves as an enhanced version of the single-bracket syntax. it mainly has the same features, but also some important differences with it.						
+
+1. when comparing strings, the double-bracket syntax features shell globbing. 
+    ex: if [[ "$stringvar" == *string* ]]; then      
+   This means that an asterisk (“*”) will expand to literally anything, just as you probably know from normal command-line usage. 
+   Therefore, if $stringvar contains the phrase “string” anywhere, the condition will return true. 
+    ex: if [[ "$stringvar" == *[sS]tring* ]]; then
+   note: globbing will not work if you quote the right string. 
+
+2. The second difference is word splitting is prevented.Therefore,you could omit placing quotes around string variables and use a condition like the following.
+   ex: if [[ $stringvarwithspaces != foo ]]; then   
+
+3. The third difference consists of not expanding filenames. 
+   ex: if [ -a *.sh ]; then
+       The above condition will return true if there is one single file in the working directory that has a .sh extension. If there are none, it will return false.
+	   If there are several .sh files, bash will throw an error and stop executing the script. This is because *.sh is expanded to the files in the working directory.
+	   
+	   if [[ -a *.sh ]]; then
+	   The above condition will return true only if there is a file in the working directory called “*.sh”, no matter what other .sh files exist.
+	   The asterisk is taken literally, because the double-bracket syntax does not expand filenames.
+
+4. The fourth difference is the addition of more generally known combining expressions, or, more specific, the operators “&&” and “||”.
+    ex: if [[ $num -eq 3 && "$stringvar" == foo ]]; then
+	
+5. The fifth difference is that the double-bracket syntax allows regex pattern matching using the “=~” operator. 
+
+3.Double-parenthesis syntax:
+----------------------------
+There also is another syntax for arithmetic (number-based) conditions.
+   ex: if (( $num <= 5 )); then
+It features all the ‘normal’ operators,like “==”,“<”and“>=”.It supports the “&&” and “||” combining expressions (but not the -a and -o ones!). 
+   
+CASE statement:
+---------------
+The case-statement can execute commands based on a pattern matching decision. It can be used to test simple values like integers and characters.
+Case statement is not a loop, it doesn’t execute a block of code for n number of times. Instead, bash shell checks the condition, and controls the flow of the program.
+The case construct in bash shell allows us to test strings against patterns that can contain wild card characters.
+
+Syntax of case statement:
+------------------------
+case expression in
+    pattern1 )
+        statements ;;
+    pattern2 )
+        statements ;;
+    ...
+esac
+
+Points to remember:
+-------------------
+1. Case statement first expands the expression and tries to match it against each pattern.
+2. When a match is found all of the associated statements until the double semicolon (;;) are executed.
+3. After the first match, case terminates with the exit status of the last command that was executed.
+4. If there is no match, exit status of case is zero.
+
+ex:- vi signal.sh
+     
+	 #!/bin/bash
+     if [ $# -lt 2 ]
+     then
+        echo "Usage : $0 Signalnumber PID"
+        exit
+     fi
+
+case "$1" in
+
+1)  echo "Sending SIGHUP signal"
+    kill -SIGHUP $2
+    ;;
+2)  echo  "Sending SIGINT signal"
+    kill -SIGINT $2
+    ;;
+3)  echo  "Sending SIGQUIT signal"
+    kill -SIGQUIT $2
+    ;;
+9) echo  "Sending SIGKILL signal"
+   kill -SIGKILL $2
+   ;;	
+*) echo "Signal number $1 is not processed"
+   ;;
+esac
+
+o/p:- /home/apdev/aditya> ./signal.sh 9 30044
+                          Sending SIGKILL signal
+
+                          Connection closed.
+      Type `help' to learn how to use Xshell prompt.
+Xshell:\> 
+Connection closed by foreign host.
+Xshell:\> 
+
+11. Iterative constructs 
+------------------------
+	for loop:
+	----------
+	
+	Main syntaxes that we aften come accross:
+
+	1.	for VARIABLE in 1 2 3 4 5 .. N
+		do
+			command1
+			command2
+			commandN
+		done												(OR)
+		
+	2.	for VARIABLE in file1 file2 file3
+		do
+			command1 on $VARIABLE
+			command2
+			commandN
+		done												(OR)
+		
+	3.	for OUTPUT in $(Linux-Or-Unix-Command-Here)
+		do
+			command1 on $OUTPUT
+			command2 on $OUTPUT
+			commandN
+		done
+		
+	Examples:
+	
+	1. 	#!/bin/bash
+		for i in 1 2 3 4 5
+		do
+			echo "Welcome $i times"
+		done
+															(OR)
+	2.	#!/bin/bash
+		for i in {1..5}
+		do
+			echo "Welcome $i times"
+		done
+															(OR)
+	3.	#!/bin/bash
+		for (( c=1; c<=5; c++ ))
+		do
+			echo "Welcome $c times"
+		done
+		
+		o/p:
+		Welcome 1 times
+		Welcome 2 times
+		Welcome 3 times
+		Welcome 4 times
+		Welcome 5 times
+		
+		
+	4.	#!/bin/bash
+		for i in $(seq 1 2 10)										# Using seq command
+		do
+			echo "Welcome $i times"
+		done
+		
+		o/p:
+		Welcome 1 times
+		Welcome 3 times
+		Welcome 5 times
+		Welcome 7 times
+		Welcome 9 times
+		
+		
+	5.	#!/bin/bash
+		i=1
+		weekdays="Mon Tue Wed Thu Fri"
+		for day in $weekdays										#"$weekdays" will not work
+		do
+			echo "Weekday $((i++)) : $day"
+		done
+
+		o/p:
+		Weekday 1 : Mon
+		Weekday 2 : Tue
+		Weekday 3 : Wed
+		Weekday 4 : Thu
+		Weekday 5 : Fri
+		
+	
+	6.	#!/bin/bash
+		i=1
+		for day
+		do
+			echo "Weekday $((i++)) : $day"
+		done
+
+		o/p:
+		> ./for.sh Mon Tue Wed Thu Fri								# Specifying list from positional parameters
+		Weekday 1 : Mon
+		Weekday 2 : Tue
+		Weekday 3 : Wed
+		Weekday 4 : Thu
+		Weekday 5 : Fri	
+		
+		
+	7.	#!/bin/bash
+		i=1
+		for username in `awk -F: '{print $1}' /etc/passwd`				# Unix command output as list values
+		do
+			echo "Username $((i++)) : $username"
+		done
+		
+		o/p:
+		Username 1 : root
+		Username 2 : daemon
+		Username 3 : bin
+		................
+		Username 31 : apdev
+		Username 32 : ftp
+		Username 33 : sshd
+		Username 34 : conservr
+		
+		
+	8.	#!/bin/bash
+		i=1
+		for item in *													# All files and directories as list of values
+		do
+			echo "Item $((i++)) : $item"
+		done
+		
+		o/p:
+		Item 1 : *
+		Item 2 : \
+		Item 3 : 100
+		Item 4 : 1212
+		Item 5 : 1.lib
+		
+		
+	9.	#!/bin/bash
+		i=1
+		for day in Mon Tue Wed Thu Fri
+		do
+			echo "Weekday $((i++)) : $day"
+			if [ $i -eq 3 ]; then
+				break;													# Break out of the for loop
+			fi
+		done
+		
+		o/p:
+		Weekday 1 : Mon
+		Weekday 2 : Tue
+		
+		
+	10.	#!/bin/bash
+		i=1
+		for day in Mon Tue Wed Thu Fri Sat Sun
+		do
+			echo -n "Day $((i++)) : $day"
+			if [ $i -eq 7 -o $i -eq 8 ]; then
+				echo " (WEEKEND)"
+				continue;												# Continue from the top of the for loop
+			fi
+			echo " (weekday)"
+		done
+		
+		o/p:
+		Day 1 : Mon (weekday)
+		Day 2 : Tue (weekday)
+		Day 3 : Wed (weekday)
+		Day 4 : Thu (weekday)
+		Day 5 : Fri (weekday)
+		Day 6 : Sat (WEEKEND)
+		Day 7 : Sun (WEEKEND)
+
+	
+	11.	#!/bin/bash
+		i=1;
+		for (( ; ; ))													# Infinite loop
+		do
+			sleep $i
+			echo "Number: $((i++))"
+		done
+		
+		
+		o/p:
+		Number: 1
+		Number: 2
+		Number: 3
+		Number: 4
+		Number: 5
+		^Z
+		[4]+  Stopped                 ./for.sh
+		
+		
+	12.	#!/bin/bash
+		for ((i=1, j=10; i <= 5 ; i++, j=j+5))							# Using comma in the bash for loop
+			do
+				echo "Number $i: $j"
+			done
+			
+		o/p:
+		Number 1: 10
+		Number 2: 15
+		Number 3: 20
+		Number 4: 25
+		Number 5: 30
+		
+		
+	While loop:
+	------------
+	
+	While Loop executes the block of code (enclosed in do...done) when the condition is true and keeps executing that till the condition becomes false. 
+	Once the condition becomes false, the while loop is terminated.
+	
+	Syntax:
+		while expression
+		do
+			commands
+		done
+		
+		
+	1.	a sample shell code to calculate factorial using while loop:
+	
+		#!/bin/bash
+		counter=$1
+		factorial=1
+		while [ $counter -gt 0 ]
+		do
+			factorial=$(( $factorial * $counter ))
+			counter=$(( $counter - 1 ))
+		done
+		echo $factorial
+		
+		o/p:
+		/home/apdev/sagar> ./whle.sh 5
+		120
+		
+		
+		
+	2.	Conditional while loop exit with break statement
+	
+		#!/bin/bash
+ 
+		while :
+		do
+			read -p "Enter two numnbers ( - 1 to quit ) : " a b
+			if [ $a -eq -1 ]
+				then
+				break
+			fi
+			ans=$(( a + b ))
+			echo $ans
+		done
+		
+		o/p:
+		Enter two numnbers ( - 1 to quit ) : 2 5
+		7
+		Enter two numnbers ( - 1 to quit ) : -1
+		/home/apdev/sagar>
+		
+		
+	3.	
+		#!/bin/bash
+		SCORE="0"
+		AVERAGE="0"
+		SUM="0"
+		NUM="0"
+		echo
+		while true
+			do
+				echo -n "enter your score [0-100%],(q for quit): "
+				read SCORE
+				if (( "$SCORE" < "0" ))  ||  (( "$SCORE" > "100" ))
+				then
+					echo "Please follow condition. Enter your score again"
+					elif [ $SCORE == "q" ]
+						then
+							echo "average score is : $AVERAGE %"
+							break
+				else
+				SUM=$[ $SUM + $SCORE ]
+				NUM=$[ $NUM + 1 ]
+				AVERAGE=$[ $SUM / $NUM ]
+				fi
+
+			done
+			
+		o/p:
+		enter your score [0-100%],(q for quit): 25
+		enter your score [0-100%],(q for quit): 75
+		enter your score [0-100%],(q for quit): 25
+		enter your score [0-100%],(q for quit): q
+		average score is : 41 %
+		
+	Until loop:
+	-------------
+	
+	Until Loop executes the block of code (enclosed in do...done) when the condition is false and keep executing that till the condition becomes true. 
+	Once the condition becomes true, the until loop is terminated.
+	
+	syntax:
+
+		until expression
+		do
+			commands #body of the loop
+		done
+	
+	
+	1.	#!/bin/bash
+		COUNTER=15
+		until [ $COUNTER -lt 10 ]; do
+				echo COUNTER $COUNTER
+				let COUNTER-=1
+				done
+				
+		o/p:
+		COUNTER 15
+		COUNTER 14
+		COUNTER 13
+		COUNTER 12
+		COUNTER 11
+		COUNTER 10
+		
+12. Word Splitting/Delimiters/IFS - their usage in parsing files :-
+-----------------------------------------------------------------
+
+Word Splitting:-     http://blog2samus.tumblr.com/post/59364596721/a-few-tricks-with-bash-variables  https://csc.cdf.toronto.edu/mybb/showthread.php?tid=27
+--------------
+Variables are little bit tricky on bash. The most common problem is when “expanding” them because if unquoted, they may cause unforseen effects.
+This occurs because after the expansion bash performs “word splitting” but there’s some exceptions.
+
+Let's start with a variable assignment and a call to echo:
+Ex:- /home/apdev/aditya> var="today is friday"
+	 /home/apdev/aditya> echo $var
+	 today is friday
+What exactly happening?
+-----------------------
+first the shell does a variable expansion to obtain the contents of variable "var". Then, it splits that resulting string based on whitespace. 
+So,it splits variable "var" into three tokens "today","is",and "Thursday".It then passes them to echo, so that when echo gets called it has three commandline arguments.
+i.e. $1 would be "today",$2 would be "is" and $3 would be "friday". Then echo willprint them with the white spaces.
+
+ex:-  /home/apdev/aditya> var="today            is                   friday"
+	  /home/apdev/aditya> echo $var
+						  today is friday
+	  /home/apdev/aditya> echo "$var"
+						  today            is                   friday
+What the shell did is it still find only three tokens, and it passed these three (with no whitespace) to echo. Echo then prints them as usual. 
+Splitting a value into tokens like the shell is doing is called word splitting. To inhibit word splitting, use double quotes.	
+
+sometimes we confuse this with the expansion using braces which is used for a different purpose and will not prevent word splitting:
+
+ex:-  /home/apdev/aditya> var="foo bar"
+	  /home/apdev/aditya> for element in ${var}
+	  > do
+	  > echo $element
+	  > done
+	o/p: foo
+		 bar				  
+you will still need to quote ("${var}") to get the output like "foo bar".
+
+As you can see echo doesn’t care much about the spaces in the var, the [[ is another exception but [ is not:-
+
+ex:-	/home/apdev/aditya> var='foo bar'
+		/home/apdev/aditya> [[ $var = 'foo bar' ]] && echo true
+		true
+		/home/apdev/aditya> [ $var = 'foo bar' ] && echo true
+		-bash: [: too many arguments
+		/home/apdev/aditya> [[ "$var" = 'foo bar' ]] && echo true
+		true
+
+Usage in Parsing the file:-
+---------------------------
+Ex:- /home/apdev/aditya> cat data.txt
+	 "abc 123" 1 2 3 "how are you"
+     /home/apdev/aditya> vi prog1
+	  #!/bin/bash
+      echo "inside prog1 with $# arguments"
+
+     if [[ $# -eq 0 ]]
+       then
+       text=$(cat data.txt)
+       echo ./prog1 "$text"
+       ./prog1 "$text"
+     else
+       for arg in "$@"
+      do
+        echo "Arg is \"$arg\""
+      done
+     fi
+
+o/p: /home/apdev/aditya> ./prog1
+     inside prog1 with 0 arguments
+	 ./prog1 "abc 123" 1 2 3 "how are you"
+	 inside test with 5 arguments
+	 Arg is "abc 123"
+	 Arg is "1"
+	 Arg is "2"
+	 Arg is "3"
+	 Arg is "how are you"
+
+IFS(Internal Field Seperator):-
+------------------------------
+IFS The Internal Field Separator that is used for word splitting after expansion and to split lines into words with the read builtin command. 
+The default value is "<space><tab><newline>". In bash, and similar shells, you could do something like IFS=$' \t\n'. 
+If IFS is unset (i.e. after unset IFS), it is equivalent IFS being set to $' \t\n' (a space, a tab and a newline). If IFS is set to an empty value i.e.“null”
+(like IFS= or IFS='' or IFS=""), no field splitting is performed at all.				
+
+ex:- /home/apdev/aditya> echo "'$IFS'"
+' 	
+'
+/home/apdev/aditya> IFS=""
+/home/apdev/aditya> echo "'$IFS'"
+''
+/home/apdev/aditya> unset IFS
+/home/apdev/aditya> echo "'$IFS'"
+''
+/home/apdev/aditya> IFS=$' \t\n'
+/home/apdev/aditya> echo "'$IFS'"
+' 	
+'
+Ex:- /home/apdev/aditya> IFS= read a b c 
+the plain gold ring
+/home/apdev/aditya> echo "=$a="
+=the plain gold ring=
+/home/apdev/aditya> echo "=$a=" "=$b=" "=$c="
+=the plain gold ring= == ==
+/home/apdev/aditya> IFS=$' \t\n' read a b c 
+the plain	gold	ring
+/home/apdev/aditya> echo "=$c="
+=gold	ring=
+/home/apdev/aditya> echo "=$a=" "=$b=" "=$c="
+=the= =plain= =gold	ring=
+/home/apdev/aditya> IFS=$' \t\n' read a b c 
+the    plain gold      ring
+/home/apdev/aditya> echo "=$a= =$b= =$c="
+=the= =plain= =gold      ring=
+/home/apdev/aditya> IFS=: read a b c 
+1:2:::3::4
+/home/apdev/aditya> echo "=$a= =$b= =$c="
+=1= =2= =::3::4=
+
+ex:- /home/apdev/aditya> line=learn:unix:at:livefire:labs
+	 /home/apdev/aditya> for i in $line
+	 > do
+	 > echo $i
+	 > done
+	 learn:unix:at:livefire:labs
+
+	 /home/apdev/aditya> IFS=:
+	 /home/apdev/aditya> for i in $line ; do  echo $i; done
+	 learn
+	 unix
+	 at
+	 livefire
+	 labs
+
+Delimiters:-
+-----------
+If we want to split a string in a bash shell script with the following conditions. 1) The delimiter is a variable 2) The delimiter is multicharacater
+Delimiters are used to separate its values. Most database and spreadsheet programs are able to read or save data in a delimited format.
+we can use delimiters with different commands like
+1. Processing the delimited files using cut
+2. Processing the delimited files using awk
+3. Processing the delimited files using sort etc...
+Ex:- /home/apdev/aditya> cut -d: -f1 /etc/passwd
+	root
+	daemon
+	bin
+	sys
+	sync
+	games
+	man
+	lp
+-d : Specifies to use character : as delimiter
+-f1 : Print first field, if you want print second field use -f2 and so on...
+
+/home/apdev/aditya> awk -F':' '{ print $1 }' /etc/passwd
+    root
+	daemon
+	bin
+	sys
+	sync
+	games
+	man
+	lp
+
+-F: - Use : as fs (delimiter) for the input field separator
+print $1 - Print first field, if you want print second field use $2 and so on.
+
+13.SHELL GLOBBING :
+-----------------
+	"Glob" is the common name for a set of Bash features that match or expand specific types of patterns. Some synonyms for globbing (depending on the context in which it appears) 
+	are pattern matching, pattern expansion, filename expansion, and so on.
+	
+		pattern matching:
+		-----------------
+		ex1:-
+			/home/apdev/sagar> var=aditya
+			/home/apdev/sagar> if [ "$var" = "aditya" ];then echo "matching";else echo "not matching";fi
+			matching
+
+	
+	All globs are implicitly anchored at both start and end. For example:
+	
+		*					Matches any string, of any length
+		foo*				Matches any string beginning with foo
+		*x*					Matches any string containing an x (beginning, middle or end)
+		*.tar.gz			Matches any string ending with .tar.gz
+		*.[ch]				Matches any string ending with .c or .h
+		foo?				Matches foot or foo$ but not fools
+			
+			
+		pattern expansion:
+		------------------
+		ex2:-
+			/home/apdev/sagar> var=aditya
+			/home/apdev/sagar> if [[ "$var" = a* ]];then echo "matching";else echo "not matching";fi
+			matching
+			
+				
+		?(list): Matches zero or one occurrence of the given patterns.
+		*(list): Matches zero or more occurrences of the given patterns.
+		+(list): Matches one or more occurrences of the given patterns.
+		@(list): Matches one of the given patterns.
+		!(list): Matches anything except one of the given patterns.
+			
+		
+		file expansion:
+		---------------
+		ex3:-
+			/home/apdev/sagar/vjj> ls
+			a  dd.sh  mm.jpj  pp.rr  vv.txt
+			/home/apdev/sagar/vjj> echo !(*txt|*rr)
+			a dd.sh mm.jpj
+			
+			
+	Globs can specify a range or class of characters, using square brackets. This gives you the ability to match against a set of characters. For example:
+
+					
+			[abcd]				Matches a or b or c or d
+			[a-d]				The same as above, if your locale is C or POSIX. Otherwise, implementation-defined.
+			[!aeiouAEIOU]		Matches any character except a, e, i, o, u and their uppercase counterparts
+			[[:alnum:]]			Matches any alphanumeric character in the current locale (letter or number)
+			[[:space:]]			Matches any whitespace character
+			[![:space:]]		Matches any character that is not whitespace
+			[[:digit:]_.]		Matches any digit, or _ or .
+			
+			
+		ex4:-
+			/home/apdev/sagar> var=vijay
+			/home/apdev/sagar> if [[ "$var" = [vV]* ]];then echo "matching";else echo "not matching";fi
+			matching
+			
+
+14. Regular expressions/Extended regular expressions - common Regex patterns :-
+-----------------------------------------------------------------------------
+	Regular expressions (Regex) is one of the advanced concept we require to write efficient shell scripts and for effective system administration. 
+	A regular expression is a concept of matching a pattern in a given string. Basically regular expressions are divided in to 3 types.
+	
+	1. Basic regular expressions
+	2. Interval regular expressions
+	3. Extended regular expressions
+	
+	Basic regular expressions:
+	--------------------------
+	This set includes very basic set of regular expressions which do not require any options to execute.
+	
+		^ –Caret/Power symbol to match a starting at the beginning of line.
+
+		$ –To match end of the line
+
+		* –0 or more occurrence of previous character.
+
+		. –To match any character
+
+		[] –Range of character
+
+		[^char] –negate of occurrence of a character set
+
+		<word> –Actual word finding
+
+		–Escape character
+		
+	Ex 1: Find all the files in a given directory
+			
+			/home/apdev/sagar> ls -l | grep ^-
+			-rw-r--r-- 1 apdev apdev     0 2014-07-11 09:59 *
+			-rw-r--r-- 1 apdev apdev   169 2014-07-10 16:31 \
+			-rw-r--r-- 1 apdev apdev     0 2014-07-14 15:08 100
+			-rwxr-xr-x 1 apdev apdev    35 2014-07-23 16:34 1.lib
+			....................................................
+	
+	Ex 2: Find all the subdirectories in a given directory	
+			
+			/home/apdev/sagar> ls -l | grep ^d
+			drwxr-xr-x 2 apdev apdev  4096 2014-07-14 15:32 1212
+			drwxr-xr-x 3 apdev apdev  4096 2014-07-29 10:13 sagar2
+			drwxr-xr-x 2 apdev apdev  4096 2014-07-28 16:34 sagar3
+			drwxr-xr-x 3 apdev apdev  4096 2014-07-14 15:37 ultimate
+			drwxr-xr-x 2 apdev apdev  4096 2014-07-25 12:06 vjj
+			drwxr-xr-x 2 apdev apdev  4096 2014-07-10 16:31 vjj2
+			
+	Ex 3: Match all the files which ends with lib
+	
+			/home/apdev/sagar> ls -l | grep lib$
+			-rwxr-xr-x 1 apdev apdev    35 2014-07-23 16:34 1.lib
+			-rwxr-xr-x 2 apdev apdev   338 2014-07-23 12:35 common.lib
+			
+	Ex 4: Find empty lines in a file
+	
+			/home/apdev/sagar> grep '^$' enter.name 
+
+
+			/home/apdev/sagar>
+			
+	Ex 5: Match all files which have a word for, for1, for2... etc in the file name.
+	
+			/home/apdev/sagar> ls -l | grep "for*"
+			-rw-rw-r-- 1 apdev apdev     0 2014-07-24 11:51 for1.sh
+			-rw-rw-r-- 1 apdev apdev   121 2014-07-14 15:28 for2.sh
+			-rw-rw-r-- 1 apdev apdev   115 2014-07-24 09:59 for3.sh
+			-rwxr-xr-x 1 apdev apdev    71 2014-07-14 14:08 for4.sh
+			-rwxr-xr-x 1 apdev apdev    66 2014-07-23 17:21 for5.sh
+			-rwxr-xr-x 1 apdev apdev    70 2014-07-23 17:13 for6.sh
+			-rwxr-xr-x 1 apdev apdev    69 2014-07-24 10:32 for7.sh
+			-rwxr-xr-x 1 apdev apdev   149 2014-07-24 12:56 for.sh
+			
+	Ex 6: Match files whose extensions are like e_p
+	
+			/home/apdev/sagar> ls -l | grep "e.p$"
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 11:42 lgin1.exp
+			-rwxr-xr-x 1 apdev apdev   193 2014-07-10 16:31 lgin.exp
+			
+	Ex 7: Find all the file names whose extension starts with a and end with k
+	
+			/home/apdev/sagar> ls -l | grep "a.*k$"
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 11:46 hi.awak
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 11:46 hi.awk
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 11:47 hi.awwaak
+			-rw-r--r-- 1 apdev apdev   121 2014-07-11 14:39 processed.awk
+			
+	Ex 8: Find all the files which contains a number in the file name between v and s
+	
+			/home/apdev/sagar> ls -l | grep 'v[0-9]s'
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 11:54 v1s.sh
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 11:55 v2s.sh
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 11:55 v3s.sh
+			
+							Some range operaators examles:
+							
+							[a-z] –Match’s any single char between a to z.
+							[A-Z] –Match’s any single char between a to z.
+							[0-9] –Match’s any single char between 0 to 9.
+							[a-zA-Z0-9] – Match’s any single character either a to z or A to Z or 0 to 9
+							[!@#$%^] — Match’s any ! or @ or # or $ or % or ^ character.
+							
+	Ex 9: Match all the file names except a or b or c in its filenames
+	
+			/home/apdev/sagar> grep '[^abc]' HERE
+			d
+			dddd
+			abcd
+			cdab
+			bdca
+			dabc
+			
+	Ex10: Find files which contain [ in its name.
+	
+		as [ is a special charter we have to escape it.
+		
+		/home/apdev/sagar> ls | grep '[[]'
+		e[sc.sh
+	
+	
+	Interval regular expressions :
+	------------------------------
+	
+	These are used to mention no of character/character set reputation info.
+	Note: In order to use this set of regular expressions we have to use -E with grep command and -r option with sed commands
+	
+							{n} –n occurrence of previous character
+
+							{n,m} – n to m times occurrence of previous character
+
+							{m, } –m or more occurrence of previous character
+							
+	Ex 1: Find all the file names which contain “m” and  m repeats for 2 times consecutively.
+	
+			/home/apdev/sagar> ls -l | grep -E 'm{2}'
+			-rwxr-xr-x 2 apdev apdev   338 2014-07-23 12:35 common.lib
+			-rw-r--r-- 1 apdev apdev   207 2014-07-23 12:10 common.sh
+			
+	Ex 2: Find all file names which contain letter "m" with 1 occurence to 3 occurence consecutively.
+	
+			/home/apdev/sagar> ls -l | grep -E 'm{1,3}'
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 14:18 cmmm.sh
+			-rwxr-xr-x 2 apdev apdev   338 2014-07-23 12:35 com
+			-rwxr-xr-x 2 apdev apdev   338 2014-07-23 12:35 common.lib
+			-rw-r--r-- 1 apdev apdev   207 2014-07-23 12:10 common.sh
+			-rwxr-xr-x 1 apdev apdev   226 2014-07-29 11:30 enter.name
+			..........................................................
+			
+	Ex 3: Find all the file names which contains m letter twice and more in a file name.
+	
+			/home/apdev/sagar> ls -l | grep -E 'm{2,}'
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 14:18 cmmm.sh
+			-rwxr-xr-x 2 apdev apdev   338 2014-07-23 12:35 common.lib
+			-rw-r--r-- 1 apdev apdev   207 2014-07-23 12:10 common.sh
+			
+	
+	Extended regular expressions :
+	------------------------------
+	These regular expressions extend the regular expression features.
+	Note: In order to use this set of regular expressions we have to use -E with grep command and -r option with sed commands
+	
+							+ –one or more occurrence of previous character
+
+							| — or option, we can specify either a character to present in the pattern.
+
+							? — 0 or one occurrence of previous character
+
+							() — grouping of character set.
+	
+	Ex 1: Find all the files which contains one or more occurence of letter "m"
+	
+			/home/apdev/sagar> ls | grep -E 'm+'
+			cmmm.sh
+			com
+			common.lib
+			common.sh
+			enter.name
+			exmpl2.sh
+			makdir
+			myfile
+			
+			
+	Ex 2: Find all the files which may contain b or q in its file name
+	
+			/home/apdev/sagar> ls -l | grep -E 'b|q'
+			-rwxr-xr-x 1 apdev apdev    35 2014-07-23 16:34 1.lib
+			-rw-r--r-- 1 apdev apdev    23 2014-07-18 13:01 b
+			-rw-r--r-- 1 apdev apdev     0 2014-07-10 16:31 b]]
+			-rwxr-xr-x 2 apdev apdev   338 2014-07-23 12:35 common.lib
+			-rwxr-xr-x 1 apdev apdev   153 2014-07-22 17:33 lib.sh
+			-rw-r--r-- 1 apdev apdev     0 2014-07-29 14:34 qcty.sh
+			
+	Ex 3: Find all the files which may contain 0 or 1 occurrence of t in filename
+	
+			/home/apdev/sagar/sagar2> ls -l | grep -E 't?'
+			total 8
+			-rw-r--r-- 1 apdev apdev    0 2014-07-29 14:48 best1
+			-rwxr-xr-x 1 apdev apdev  310 2014-07-28 16:02 disktest.sh
+			drwxr-xr-x 2 apdev apdev 4096 2014-07-29 10:13 sagar4
+			-rw-r--r-- 1 apdev apdev    0 2014-07-29 14:48 test1
+			-rw-r--r-- 1 apdev apdev    0 2014-07-10 15:03 v1
+			-rw-r--r-- 1 apdev apdev    0 2014-07-10 15:04 v2
+			-rw-r--r-- 1 apdev apdev    0 2014-07-10 15:04 v3
+			
+	Ex 4: Find all the files which contains es in the sequence
+	
+			/home/apdev/sagar/sagar2> ls -l | grep -E '(es)'
+			-rw-r--r-- 1 apdev apdev    0 2014-07-29 14:48 best1
+			-rwxr-xr-x 1 apdev apdev  310 2014-07-28 16:02 disktest.sh
+			-rw-r--r-- 1 apdev apdev    0 2014-07-29 14:48 test1
+			
+			
+	*** 	bash's built-in regular expression comparison operator "=~"
+			-------------------------		---------------------------
+			
+			Bash's regular expression comparison operator takes a string on the left and an extended regular expression on the right. 
+			It returns 0 (success) if the regular expression matches the string, otherwise it returns 1 (failure).
+			
+	Ex 1:	#!/bin/bash
+			echo enter your name
+			read var
+			if [[ $var =~ v...y ]]
+			then
+			echo matching
+			echo
+			else
+			echo not matching
+			echo
+			fi
+			
+			o/p:
+			----
+			/home/apdev/sagar/sagar2> ./reg.sh 
+			enter your name
+			vijay
+			matching
+	
+15. Interesting options of commands - ps (including thread level options), cp, ln, rm, ls, mkdir, sort, cut, grep, egrep 
+
+ps- report process status:-  http://linux.about.com/od/commands/l/blcmdl1_ps.htm   http://www.binarytides.com/linux-ps-command/  http://www.computerhope.com/unix/ups.htm
+--------------------------
+Process is a running instance of a program. Linux is a multitasking operating system, which means that more than one process can be active at once. 
+Use ps command to find out what processes are running on your system.ps gives a snapshot of the current processes.If you want a repetitive update of this status,use top.
+
+command line options:-
+---------------------
+This version of ps accepts several kinds of options. 
+    1. Unix98 options may be grouped and must be preceeded by a dash. 
+	   ex:-  -C	 select by command name
+			 -G	 select by RGID (supports names)
+			 -U	 select by RUID (supports names)
+			 -g	 select by session leader OR by group name
+			 -p	 select by PID
+			 -s	 select processes belonging to the sessions given
+			 -t	 select by tty
+			 -u	 select by effective user ID (supports names)
+			
+    2. BSD options may be grouped and must not be used with a dash.
+        ex:-  T	 select all processes on this terminal
+			  a	 select all processes on a terminal, including those of other users 
+			  g	 really all, even group leaders (does nothing w/o SunOS settings) 
+			  r	 restrict output to running processes
+			  x	 select processes without controlling ttys	
+			  
+    3. GNU long options are preceeded by two dashes.
+		ex:-  --Group	select by real group name or ID
+			  --User	select by real user name or ID
+			  --group	select by effective group name or ID
+			  --pid	    select by process ID
+			  --sid	    select by session ID
+			  --tty		select by terminal
+			  --user	select by effective user name or ID
+			
+Examples :-
+----------
+1. ps command to list down all the process which are currently running in a machine:-
+------------------------------------------------------------------------------------
+/home/apdev/aditya> ps -ef
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 Mar12 ?        00:00:01 /sbin/init
+root         2     0  0 Mar12 ?        00:00:00 [kthreadd]
+root         3     2  0 Mar12 ?        00:00:00 [migration/0]
+root         4     2  0 Mar12 ?        00:00:24 [ksoftirqd/0]
+root         5     2  0 Mar12 ?        00:00:00 [watchdog/0]			
+
+-e to display all the processes.
+-f to display full format listing.
+
+In case of BSD machines,we can use 'ps -aux' will givesame details as above.
+
+2. ps command to display the processes belong to particular user:-
+-----------------------------------------------------------------
+   Use -u option to displays the process that belongs to a specific username. When you have multiple username, separate them using a comma. 
+   The example below displays all the process that are owned by user apdev.
+    
+/home/apdev/aditya> ps -f -u apdev
+UID        PID  PPID  C STIME TTY          TIME CMD
+apdev     3451  3087  0 Mar12 tty1     00:00:00 -bash
+apdev     3678  3451  0 Mar12 tty1     00:00:00 vi /etc/network/interfaces
+apdev     3706     1  0 Mar12 ?        00:00:01 /usr/bin/gnome-keyring-daemon --daemonize --login
+apdev     3720  3436  0 Mar12 ?        00:00:18 /usr/bin/gnome-session
+
+3. List the processes based on PIDs or PPIDs (ps -p, ps –ppid):-
+--------------------------------------------------------------
+/home/apdev/aditya> ps -f -p 31800,31811
+UID        PID  PPID  C STIME TTY          TIME CMD
+apdev    31800 31650  0 11:03 pts/13   00:00:00 man tar
+apdev    31811 31800  0 11:03 pts/13   00:00:00 pager -s
+
+ps -f --ppid 31800
+UID        PID  PPID  C STIME TTY          TIME CMD
+apdev    31811 31800  0 11:03 pts/13   00:00:00 pager -s
+
+4.  List elapsed wall time for processes (ps -o pid,etime=):-
+-----------------------------------------------------------
+/home/apdev/aditya> ps -p 1,29675 -o pid,etime=            
+    PID            
+    1 137-19:15:30
+26975 117-00:55:51
+
+The command displays the elapsed time for the process IDs 1 (init) and process id 29675.
+the ps command provides etime which provides the elapsed time since the process was started.
+For example “137-19:15:30? in the output represents the process init is running for 137days, 19hours,15minutes and 30seconds. 
+Since init process starts during the system startup, this time will be same as the output of the ‘uptime’ command. 
+
+5. List all threads for a particular process (ps -L):-
+-----------------------------------------------------
+   You can get a list of threads for the processes. When a process hangs, we might need to identify the list of threads running for a particular process.
+   /home/apdev/aditya> ps -C bash -L -o pid,tid,pcpu,state,nlwp,args
+  PID   TID %CPU S NLWP COMMAND
+ 3451  3451  0.0 S    1 -bash
+16899 16899  0.0 S    1 -bash
+16933 16933  0.0 S    1 -bash
+22403 22403  0.0 S    1 bash
+22419 22419  0.0 S    1 /bin/bash
+24275 24275  0.0 S    1 /bin/bash
+
+-L option is used to display the list of threads for a process which has the command given. And it also displays nlwp, which represents number of light weight processes.
+
+6. Finding memory Leak (ps –sort pmem):-
+---------------------------------------
+   A memory leak, technically, is an ever-increasing usage of memory by an application.
+   Applications must not continue to increase their memory usage indefinitely, because this can cause serious issues. 
+   To mointer such memory leaks we will use the following command.
+   /home/apdev/aditya> ps aux | sort -n -k 4 
+   108       2448  0.0  0.0   3280  1588 ?        Ss   Mar12   2:16 /bin/dbus-daemon --system
+   111       2725  0.0  0.0   5036  1744 ?        S    Mar12   0:00 hald-addon-acpi: listening on acpid socket /var/run/acpid.socket
+   apdev     1201  0.0  0.0   2772  1016 pts/12   R+   12:13   0:00 ps aux
+    .  
+    .
+   apdev     3888  0.0  0.8  37148 26148 ?        S    Mar12   0:57 nm-applet --sm-disable
+   root      3680  0.0  0.9  38556 29232 tty7     Ss+  Mar12  62:14 /usr/X11R6/bin/X :1 -br -audit 0 -auth /var/lib/gdm/:1.Xauth -nolisten tcp vt7
+   root      2578  0.0  1.8  69560 55616 ?        Ssl  Mar12   3:57 /usr/sbin/console-kit-daemon
+   apdev    26765  0.0  2.3  91160 71736 ?        Sl   Apr02   0:19 gnome-terminal
+
+In the above ps command, –sort option outputs the highest %MEM at bottom. Just note down the PID for the highest %MEM usage.
+Then use ps command to view all the details about this process id, and monitor the change over time.
+
+PID    TTY  STAT  TIME  MAJFL  TRS  DRS    RSS    %MEM   COMMAND
+26765   ?    Sl   0:19   0     244  90915  71736  2.3    gnome-terminal GNOME_KEYRING_PID=3706 USER=apdev GNOME_KEYRING_SOCKET=/tmp/keyring-xE3tY6/socket SSH_AGENT_PID=3778 HOME=/home/apdev XDG_SESSION_
+In the above output, if RSS (resident set size, in KB) increases over time (so would %MEM), it may indicate a memory leak in the application
+
+7. Display process hierarchy in a tree style:-
+---------------------------------------------
+Many processes are actually forked out of some parent process, and knowing this parent child relationship is often helpful. 
+The '--forest' option will construct an ascii art style tree view of the process hierarchy.
+/home/apdev/aditya> ps -f --forest -C bash
+UID        PID  PPID  C STIME TTY          TIME CMD
+apdev    30788 30785  0 10:03 pts/3    00:00:00 -bash
+root     30104 30102  0 Mar13 pts/2    00:00:00 -bash
+apdev    22403 26765  0 Jul15 pts/7    00:00:00 bash
+root     22419 22403  0 Jul15 pts/7    00:00:00  \_ /bin/bash
+apdev    26957 26765  0 Apr02 pts/0    00:00:00 bash
+apdev    26766 26765  0 Apr02 pts/1    00:00:00 bash
+
+CP Command:- http://www.cyberciti.biz/faq/cp-copy-command-in-unix-examples/   http://www.rapidtables.com/code/linux/cp.htm
+-----------
+The cp command is used to copy files and directories. The copies become independent of the originals (i.e., a subsequent change in one will not affect the other).
+syntax:- cp [options] name new_name, cp [OPTION] SOURCE DEST, cp [OPTION] --target-directory=DIRECTORY SOURCE, cp SOURCE1 SOURCE2 SOURCE3 SOURCEn DIRECTORY
+Copy SOURCE to DEST, or multiple SOURCE(s) to DIRECTORY.
+
+Command options:-
+----------------
+cp -a	archive files
+cp -f	force copy by removing the destination file if needed
+cp -i	interactive - ask before overwrite
+cp -l	link files instead of copy
+cp -L	follow symbolic links
+cp -n	no file overwrite
+cp -R	recursive copy (including hidden files)
+cp -u	update - copy when source is newer than dest
+cp -v	verbose - print informative messages
+
+examples:-
+---------
+To make a copy of a file called file.txt in the current directory as newfile.txt :
+$ cp file.txt newfile.txt
+
+To copy a file in your current directory into another directory:
+/home/apdev/aditya> ls -l f1
+-rw-r--r-- 1 apdev apdev 54 2014-07-28 12:33 f1
+/home/apdev/aditya> cp f1 ../aditya_757389
+/home/apdev/aditya> ls ../aditya_757389/f1
+../aditya_757389/f1
+/home/apdev/aditya> cd ../aditya_757389/
+/home/apdev/aditya_757389> ls
+dir1  dir10  dir2  dir3  dir4  dir5  dir6  dir7  dir8  dir9  f1
+
+To copy a file to a new file and preserve the modification date, time, and access control list associated with the source file:
+home/apdev/aditya> cp -p filename ../aditya_757389
+
+To copy all the files in a directory to a new directory, enter:
+home/apdev/aditya> cp * ../aditya_757389
+home/apdev/aditya> cd ../aditya_757389/
+/home/apdev/aditya_757389> ls
+\            aditya.tar    cat          date        dir8             f1            ifelse.sh      mycal            penguin.sh          rmfldr0   sample5    strcmp        userinte       ws
+1            alias         cat1         demo_file   dir9             f2            ifelse.sh.txt  mydetails        penguin.sh.txt      run       sample6    student.awk   users          w.txt
+11.sh        average       check        demo_file1  diskrep          file          installed      myfile     
+
+To copy a directory, including all its files and subdirectories, to another directory, enter (copy directories recursively):
+/home/apdev/aditya> ls -l DIR/
+total 12
+-rwxrwxrwx 1 apdev apdev 20 2014-07-28 13:13 adi
+-rwx------ 1 apdev apdev 19 2014-07-28 13:14 kan
+-rwxrwxrwx 1 apdev apdev 14 2014-07-28 13:13 manoj
+/home/apdev/aditya> /home/apdev/aditya> ls -l DIR/
+total 12
+-rwxrwxrwx 1 apdev apdev 20 2014-07-28 13:13 adi
+-rwx------ 1 apdev apdev 19 2014-07-28 13:14 kan
+-rwxrwxrwx 1 apdev apdev 14 2014-07-28 13:13 manoj
+/home/apdev/aditya> 
+
+To copy multiple dir's of a current directory into another dirctory:
+/home/apdev/aditya_757389> cp -avr dir1 dir2 dir3 dir4 dir5 ../aditya
+`dir1' -> `../aditya/dir1'
+`dir1/dir1.2' -> `../aditya/dir1/dir1.2'
+`dir1/dir1.2/myedudetails' -> `../aditya/dir1/dir1.2/myedudetails'
+.
+.
+.
+`dir5/dir5.4' -> `../aditya/dir5/dir5.4'
+`dir5/dir5.4/file5.4' -> `../aditya/dir5/dir5.4/file5.4'
+`dir5/dir5.3' -> `../aditya/dir5/dir5.3'
+`dir5/dir5.3/file5.3' -> `../aditya/dir5/dir5.3/file5.3'
+/home/apdev/aditya> ls
+dir1 
+dir2
+dir3
+dir4
+dir5
+
+To see copy progress pass -v option to cp command:
+/home/apdev/aditya> cp -v l li
+`l' -> `li'
+/home/apdev/aditya> cp -v li l
+`li' -> `l'
+  
+To confirm file overwriting:
+
+the -i option will prompt the user if file already existing in a destination directory so that file would be overwritten with confirmation:
+/home/apdev/aditya> cp -i f1 ../aditya_757389
+cp: overwrite `../aditya_757389/f1'? y
+
+
+ln command:-  http://www.thegeekstuff.com/2010/10/linux-ln-command-examples/     http://www.computerhope.com/unix/uln.htm
+-----------
+There are two types of links available in Linux — Soft Link and Hard Link. Linux "ln" command is used to create either soft or hard links.
+ln - make links between files
+/home/apdev/aditya> ls -l
+drwx------ 2 apdev apdev  4096 2014-07-18 16:02 aaa
+-rw-r--r-- 1 apdev apdev    14 2014-07-17 14:24 add
+lrwxrwxrwx 1 apdev apdev     3 2014-07-17 14:24 add1 -> add
+
+The 1st character in each and every line of the ls command output indicates one of the following file types. If the 1st character is l,then it is a link file.
+- regular file
+l link file
+d directory
+p pipe
+c character special device
+b block special device
+
+Creating softlink/symbolic link for a file:-
+------------------------------------------
+/home/apdev/aditya> ln -s home/apdev/aditya/mydetails/library11.so
+/home/apdev/aditya> ls -l library11.so
+lrwxrwxrwx 1 apdev apdev 40 2014-07-31 12:12 library11.so -> home/apdev/aditya/mydetails/library11.so
+
+Creating softlink/symbolic link for a directory:-
+------------------------------------------------
+/home/apdev/aditya> ln -s /home/apdev/aditya/obj objects
+/home/apdev/aditya> ls -l objects
+lrwxrwxrwx 1 apdev apdev 22 2014-07-28 14:31 objects -> /home/apdev/aditya/obj
+
+Note: The inode of the original file/directory and the soft link should not be identical.
+
+Creating Hard links for files:-
+------------------------------
+The inode number for the hard linked files would be same. The hard link for files can be created as follows
+
+/home/apdev/aditya> ln mydetails  dst_link.txt
+/home/apdev/aditya> ls -i dst_link.txt 
+9781311 dst_link.txt
+/home/apdev/aditya> ls -i my 
+my               mycal            mydetails        myfile           mysystem.sh      mysystem.sh.txt  
+/home/apdev/aditya> ls -i mydetails 
+9781311 mydetails
+
+Note: Unix / Linux will not allow any user (even root) to create hard link for a directory.
+
+rm command:-     http://mylinuxbook.com/all-you-wanted-to-know-about-rm-command-in-linux/      http://www.computerhope.com/unix/shred.htm
+----------
+it remove files or directories. rm removes each specified file. By default, it does not remove directories.
+syntax: rm [OPTION]... FILE...
+
+options:
+-------
+-d, --directory       unlink FILE, even if it is a non-empty directory 
+-f, --force           ignore nonexistent files, never prompt
+-i, --interactive     prompt before any removal
+-r, -R, --recursive   remove the contents of directories recursively
+-v, --verbose         explain what is being done
+--version             output version information and exit
+
+To remove a file whose name starts with a `-', for example `-fiel1.txt', use one of these commands:
+
+rm -- -file1.txt
+rm ./-file1.txt
+
+Remove the simple file:  /home/apdev/aditya> rm a.txt
+
+Remove Directory: /home/apdev/aditya> rm -r DIR
+
+Remove the directory and any files and directories it contains, without prompting for confirmation: /home/apdev/aditya> rm -rf DIR1
+
+Remove all  files starting with f: /home/apdev/aditya> rm -i f*
+
+Remove command prompts before deleting file(s)
+/home/apdev/aditya> rm -i *
+rm: remove regular file `\\'? n
+rm: remove regular empty file `1'? n
+rm: remove regular file `11.sh'? n
+rm: remove regular empty file `123'? n
+rm: remove regular empty file `12345'? n
+/home/apdev/aditya> rm -I *
+rm: remove all arguments? n
+/home/apdev/aditya> rm -Ir dir1
+rm: remove all arguments recursively? y
+
+To stop rm command from producing errors for non-existent files or directories in output?:
+/home/apdev/aditya> rm *.cpp
+rm: cannot remove `*.cpp': No such file or directory
+/home/apdev/aditya> rm -f *.cpp
+/home/apdev/aditya> 
+
+ls command:-  http://www.rapidtables.com/code/linux/ls.htm    http://www.thegeekstuff.com/2009/07/linux-ls-command-examples/
+----------
+ls is a Linux shell command that lists directory contents of files and directories.
+ls syntax:- $ ls [options] [file|dir]
+
+ls command main options:
+------------------------
+option	               description
+ls -a		list all files including hidden file starting with '.'
+ls --color	colored list [=always/never/auto]
+ls -d		list directories - with ' */'
+ls -F		add one char of */=>@| to enteries
+ls -i		list file's inode index number
+ls -l		list with long format - show permissions
+ls -la		list long format including hidden files
+ls -lh		list long format with readable file size
+ls -ls		list with long format with file size
+ls -r		list in reverse order
+ls -R		list recursively directory tree
+ls -s		list file size
+ls -S		sort by file size
+ls -t		sort by time & date
+ls -X		sort by extension name
+
+1. Open Last Edited File Using ls -t. ls -t sorts the file by modification time, showing the last edited file first.
+2. Display One File Per Line Using ls -1.
+   ls -1
+   \
+   1
+   11.sh
+   123
+   12345
+   A
+   aa
+   aaa
+3. Display All Information About Files/Directories Using ls -l. Display long listing information about files/directories.
+/home/apdev/aditya> ls -l
+total 744
+-rw-r--r-- 1 apdev apdev   112 2014-07-03 11:29 \
+-rw-r--r-- 1 apdev apdev     0 2014-07-24 10:04 1
+-rwxrwxrwx 1 apdev apdev   148 2014-07-24 14:34 11.sh
+-rwxr-xr-x 1 apdev apdev     0 2014-07-15 12:08 123
+-rwxr-xr-x 1 apdev apdev     0 2014-07-15 12:08 12345
+4. Display File Size in Human Readable Format Using ls -lh
+   Use ls -lh (h stands for human readable form), to display file size in easy to read format. i.e M for MB, K for KB, G for GB.
+   /home/apdev/aditya> ls -lh
+    total 744K
+	-rwxr-xr-x 1 apdev apdev 7.7K 2014-07-22 16:20 libtest.so
+    -rwxr-xr-x 1 apdev apdev  152 2014-07-16 11:04 lisdir
+    -rwxrwxrwx 2 apdev apdev 4.4K 2014-07-14 12:24 mydetails
+5. Display Directory Information Using ls -ld:
+/home/apdev/aditya> ls -ld dir2
+drwxrwx--- 5 apdev apdev 4096 2014-07-07 16:32 dir2
+6. Order Files Based on Last Modified Time Using ls -lt
+   To sort the file names displayed in the order of last modification time use the -t option.
+/home/apdev/aditya> ls -lt
+total 744
+lrwxrwxrwx 1 apdev apdev    23 2014-07-28 14:35 objects1 -> /home/apdev/aditya/obj1
+lrwxrwxrwx 1 apdev apdev    30 2014-07-28 14:35 library1.so -> /home/apdev/aditya/library1.so
+.
+.
+-rwxr-xr-x 1 apdev apdev    74 2014-07-01 17:33 addition.p1
+
+7. Order Files Based on Last Modified Time (In Reverse Order) Using ls -ltr: ls -ltr
+/home/apdev/aditya> ls -ltr
+total 744
+-rwxr-xr-x 1 apdev apdev    74 2014-07-01 17:33 addition.p1
+-rwxr-xr-x 1 apdev apdev   144 2014-07-02 11:14 sample6
+-rwxr-xr-x 1 apdev apdev    89 2014-07-02 11:15 sample5
+.
+.
+lrwxrwxrwx 1 apdev apdev    23 2014-07-28 14:35 objects1 -> /home/apdev/aditya/obj1
+8. Display Hidden Files Using ls -a (or) ls -A
+9. Display Files Recursively Using ls -R
+10. Display File Inode Number Using ls -i
+11. Hide Control Characters Using ls -q
+12. Display File UID and GID Using ls -n
+13. Visual Classification of Files With Special Characters Using ls -F
+/home/apdev/aditya> ls -F
+dir*
+dir2/
+dir3/
+Library1.so@
+myfile
+
+Thus in the above output:
+/ – directory.
+nothing – normal file.
+@ – link file.
+* – Executable file
+
+mkdir command:-  http://www.computerhope.com/unix/umkdir.htm    http://www.cyberciti.biz/faq/linux-make-directory-command/
+--------------
+Short for "make directory", mkdir is used to create directories on a file system.
+syntax: mkdir [OPTION] DIRECTORY or mkdir dirname1 dirname2
+DESCRIPTION:
+-m, --mode=MODE      set permission mode (as in chmod), not rwxrwxrwx - umask
+-p, --parents        no error if existing, make parent directories as needed
+-v, --verbose        print a message for each created directory
+--help               display this help and exit
+--version            output version information and exit
+
+Creates a new directory called mydir whose parent is the current directory: mkdir mydir
+Create the mydir directory, and set its permissions such that all users may read, write, and execute the contents: mkdir -m a=rwx mydir
+ 
+sort command:-    http://www.theunixschool.com/2012/08/linux-sort-command-examples.html  http://www.computerhope.com/unix/usort.htm
+-------------
+sort command is used to sort a file, arranging the records in a particular order. By default, the sort command sorts file assuming the contents are ascii.
+
+/home/apdev/aditya> cat file
+Unix Linux Solaris AIX Linux Hpux
+
+1. sort simply sorts the file in alphabetical order: - 
+/home/apdev/aditya> sort file
+AIX Hpux Linux Linux Solaris Unix
+
+2.sort removes the duplicates using the -u option:
+/home/apdev/aditya> sort -u file
+AIX Hpux Linux Solaris Unix
+Let us consider the file with numbers:
+/home/apdev/aditya> cat file
+20 19 5 49 200
+
+3. To sort a file numerically
+/home/apdev/aditya> sort file
+100 19 20 49 5
+This is wrong because the sort did ASCII sort. so, we have to use -n for numerical sorting. -n option can sort the decimal numbers as well.
+/home/apdev/aditya> sort -n file
+5 19 20 49 100
+/home/apdev/aditya> sort -nr file    'r' option does a reverse sort.
+100 49 20 19 5
+
+multiple files:
+--------------
+Let us consider examples with multiple files, say file1 and file2, containing numbers: 
+$ cat file1
+20 19 5 49 200
+$ cat file2
+25 18 5 48 200
+
+1. Sort multiple files at a time:
+$sort -n file1 file2
+ 5 5 18 19 20 25 48 49 200 200
+The result of sort with multiple files will be a sorted and merged output of the multiple files.
+
+2. Sort, merge and remove duplicates: -u option becomes more handy in case of multiple files. With this, the output is now sorted, merged and without duplicate records. 
+$ sort -nu file1 file2
+5 18 19 20 25 48 49 200
+
+Files with multiple fields and delimiter:
+----------------------------------------
+$ cat file 
+Linux,20 
+Unix,30 
+AIX,25 
+Linux,25 
+Solaris,10 
+HPUX,100 
+
+1. sort a filecontaining multiple fields:
+$ sort file
+AIX,25
+HPUX,100
+Linux,20
+Linux,25
+Solaris,10
+Unix,30
+the file got sorted on the 1st field, by default.
+
+2. sort file on the basis of 1st field:
+$ sort -t"," -k1,1 file 
+AIX,25 
+HPUX,100 
+Linux,20 
+Linux,25 
+Solaris,10 
+Unix,30 
+'-t' option is used to provide the delimiter in case of files with delimiter. 
+'-k' is used to specify the keys on the basis of which the sorting has to be done. 
+The format of '-k' is : '-km,n' where m is the starting key and n is the ending key. 
+
+3. sorting file on the basis of the 2nd field:
+/home/apdev/aditya> sort -t "," -k2n,2 file  or  sort -t "," -k2n file   'n' should be used because numerical sorting.
+Solaris,10
+Linux,20
+AIX,25
+Linux,25
+Unix,30
+HPUX,100
+
+4. Remove duplicates from the file based on 1st field:
+/home/apdev/aditya> sort -t "," -k1,1 -u  file
+AIX,25
+HPUX,100
+Linux,20
+Solaris,10
+Unix,30
+
+5.Sort the file numerically on the 2nd field in reverse order:
+/home/apdev/aditya> sort -t "," -k2nr file or sort -t "," -k2nr,2 file
+HPUX,100
+Unix,30
+AIX,25
+Linux,25
+Linux,20
+Solaris,10
+
+6. Sort a file based on the 1st and 2nd field, and numerically on 3rd field on a file containing 5 columns:
+$ sort -t"," -k1,2 -k3n,3 file
+
+CUT command:-   http://www.thegeekstuff.com/2013/06/cut-command-examples/      http://how-to.linuxcareer.com/learning-linux-commands-cut?jsn_setmobile=no        http://how-to.linuxcareer.com/learning-linux-commands-cut?jsn_setmobile=nos
+------------
+Linux command cut is used for text processing. You can use this command to extract portion of text from a file by selecting columns.
+options:
+-------
+-b, --bytes=LIST          Cuts the input file using list of bytes specified by this option
+-c, --characters=LIST     Cuts the input file using list of characters specified by this option
+-f, --fields=LIST         Cuts the input file using list of field. The default field to be used TAB. 
+d, --delimiter=DELIMITER  Specifies a delimiter to by used as a field.
+
+1. Select Column of Characters:  To extract only a desired column from a file use -c option.
+/home/apdev/aditya> cat file.txt 
+unix or linux os
+is unix good os
+is linux good os
+/home/apdev/aditya> cut -c2 file.txt
+n
+s
+s
+
+2. Select Column of Characters using Range:
+/home/apdev/aditya> cut -c1-4 file.txt
+unix
+is u
+is l
+
+3. Select Column of Characters using either Start or End Position:
+/home/apdev/aditya> cut -c-8 file.txt
+unix or 
+is unix 
+is linux
+/home/apdev/aditya> cut -c6- file.txt
+or linux os
+ix good os
+nux good os
+
+4. Select a Specific Field from a File:
+Instead of selecting x number of characters, if you like to extract a whole field, you can combine option -f and -d. 
+The option -f specifies which field you want to extract, and the option -d specifies what is the field delimiter that is used in the input file.
+/home/apdev/aditya> cut -d':' -f1 /etc/passwd
+root
+daemon
+bin
+sys
+sync
+
+5. Select Multiple Fields from a File:
+/home/apdev/aditya> cut -d':' -f1-4,6 /etc/passwd
+root:x:0:0:/root
+daemon:x:1:1:/usr/sbin
+bin:x:2:2:/bin
+sys:x:3:3:/dev
+
+6. Select All Fields Except the Specified Fields
+/home/apdev/aditya> cut -d':' --complement -f7 /etc/passwd or cut -d':' --complement -s -f7 /etc/passwd
+root:x:0:0:root:/root
+daemon:x:1:1:daemon:/usr/sbin
+
+7. Change Output Delimiter for Display
+/home/apdev/aditya> cut -d':' --complement -s -f7 --output-delimiter='#' /etc/passwd
+root#x#0#0#root#/root
+daemon#x#1#1#daemon#/usr/sbin
+bin#x#2#2#bin#/bin
+
+8. Change Output Delimiter to Newline
+/home/apdev/aditya> cut -d':' --complement -s -f7 --output-delimiter=$'\n' /etc/passwd
+root
+x
+0
+0
+root
+/root
+daemon
+x
+1
+1
+daemon
+
+grep command:-         http://www.thegeekstuff.com/2009/03/15-practical-unix-grep-command-examples/        http://www.computerhope.com/unix/ugrep.htm
+-------------
+The grep command allows you to search one file or multiple files for lines that contain a pattern. Exit status is 0 if matches were found, 1 if no matches were found, 
+and 2 if errors occurred.
+syntax:  grep [OPTIONS] PATTERN [FILE]
+grep searches the named input FILEs (or standard input if no files are named, or if a single dash ("-") is given as the file name) for lines containing a match to the
+given PATTERN. By default, grep prints the matching lines.
+
+options:
+	-b	Display the block number at the beginning of each line.
+	-c	Display the number of matched lines.
+	-h	Display the matched lines, but do not display the filenames.
+	-i	Ignore case sensitivity.
+	-l	Display the filenames, but do not display the matched lines.
+	-n	Display the matched lines and their line numbers.
+	-s	Silent mode.
+	-v	Display all lines that do NOT match.
+	-w	Match whole word.
+
+1. Search for the given string in a single file:
+/home/apdev/aditya> grep "this" file.txt
+this line is the 1st lower case line in this file.
+Two lines above this line is empty.
+And this is the last line.
+
+2. Checking for the given string in multiple files.
+/home/apdev/aditya> cp file.txt file1.txt
+/home/apdev/aditya> grep "this" file*
+file1.txt:this line is the 1st lower case line in this file.
+file1.txt:Two lines above this line is empty.
+file1.txt:And this is the last line.
+file.txt:this line is the 1st lower case line in this file.
+file.txt:Two lines above this line is empty.
+file.txt:And this is the last line.
+
+3. Case insensitive search using grep -i
+/home/apdev/aditya> grep -i "the" file.txt
+THIS LINE IS THE 1ST UPPER CASE LINE IN THIS FILE.
+this line is the 1st lower case line in this file.
+This Line Has All Its First Character Of The Word With Upper Case.
+And this is the last line.
+
+4. Match regular expression in files
+/home/apdev/aditya> grep "lines.*empty" file.txt
+Two lines above this line is empty.
+it searches for all the pattern that starts with “lines” and ends with “empty” with anything in-between.
+
+5. Checking for full words, not for sub-strings using grep -w 
+   the following is looking only for the word “is” and not for “this”.
+/home/apdev/aditya> grep -iw "is" file.txt
+THIS LINE IS THE 1ST UPPER CASE LINE IN THIS FILE.
+this line is the 1st lower case line in this file.
+Two lines above this line is empty.
+And this is the last line.
+
+6. Displaying lines before/after/around the match using grep -A, -B and -C
+   Display N lines after the match:
+   -------------------------------
+   syntax:  grep -A <N> "string" FILENAME    -A is the option which prints the specified N lines after the match.
+   /home/apdev/aditya> grep -A 3 -w "THIS" file.txt
+   THIS LINE IS THE 1ST UPPER CASE LINE IN THIS FILE.
+   this line is the 1st lower case line in this file.
+   This Line Has All Its First Character Of The Word With Upper Case.
+   <empty line>
+   
+   Display N lines before match
+   ----------------------------
+   syntax: grep -B <N> "string" FILENAME    -B is the option which prints the specified N lines before the match.
+   /home/apdev/aditya> grep -B 2 -w "empty" file.txt
+   This Line Has All Its First Character Of The Word With Upper Case.
+
+   Two lines above this line is empty.
+ 
+   Display N lines around match
+   -----------------------------
+   syntax: grep -C <N> "string" FILENAME     -C is the option which prints the specified N lines in both the side(before & after) of match.
+   /home/apdev/aditya> grep -C 2 -w "Character" file.txt
+   THIS LINE IS THE 1ST UPPER CASE LINE IN THIS FILE.
+   this line is the 1st lower case line in this file.
+   This Line Has All Its First Character Of The Word With Upper Case.
+
+   Two lines above this line is empty.
+   
+7. Highlighting the search using GREP_OPTIONS
+/home/apdev/aditya> export GREP_OPTIONS='--color=auto' GREP_COLOR='106;9'
+/home/apdev/aditya> grep this file.txt
+this line is the 1st lower case line in this file.
+Two lines above this line is empty.
+And this is the last line.
+
+8. Searching in all files recursively using grep -r
+   When you want to search in all the files under the current directory and its sub directory. -r option is the one which you need to use.
+/home/apdev/aditya> grep -r "aditya" *
+adi:echo aditya
+aditya:aditya 
+Binary file aditya.tar matches
+dst_link.txt:aditya
+dst_link.txt:aditya.awk
+dst_link.txt:-rw-r--r-- 1 apdev apdev   46 2014-07-11 15:34 aditya
+dst_link.txt:-rw-r--r-- 1 apdev apdev   25 2014-07-11 16:01 aditya.awk
+
+9. display the lines which does not matches all the given pattern.
+syntax: grep -v -e "pattern" -e "pattern"
+/home/apdev/aditya> cat > file1.txt
+a
+b
+c
+ab
+cd
+d
+e
+ef
+/home/apdev/aditya> grep -v -e "a" -e "b" -e "c" file1.txt
+d
+e
+ef
+
+10. Counting the number of matches using grep -c
+Syntax:  grep -c "pattern" filename
+/home/apdev/aditya> grep -c "this" file.txt
+3
+/home/apdev/aditya> grep -c -i "this" file.txt
+5
+ 
+11. Display only the file names which matches the given pattern using grep -l 
+/home/apdev/aditya> grep -l "this" file*
+file1.txt
+file.txt
+
+egrep command:-
+-------------
+egrep is to search for a pattern using extended regular expressions. egrep is essentially the same as running grep with the -E option.
+syntax: egrep [options] PATTERN [FILE]
+/home/apdev/aditya> cat > file2.txt
+aditya|manoj|kantamraju
+vijay|sagar|chintha
+tata|consultancy | services
+10|adoyaua|fsyugs
+10|20|30
+fusy|20|30
+sjclck|10|hsik
+
+Search for patterns of aditya|manoj|kantamraju in the file file2.txt.
+/home/apdev/aditya> egrep "aditya" file2.txt 
+aditya|manoj|kantamraju
+/home/apdev/aditya> egrep "aditya|manoj|kantamraju" file2.txt 
+aditya|manoj|kantamraju
+
+Search for patterns of aditya and sagar in the file file2.txt
+/home/apdev/aditya> egrep "aditya|sagar" file2.txt 
+aditya|manoj|kantamraju
+vijay|sagar|chintha
+
+Match any lines in file2.txt which begin a line with an alphabetic word which also ends the line.
+/home/apdev/aditya> egrep '^[a-zA-Z][a-zA-Z$]' file2.txt
+aditya|manoj|kantamraju
+vijay|sagar|chintha
+tata|consultancy | services
+fusy|20|30
+sjclck|10|hsik
+
+Count the number of lines in file2.txt which begin with the word 'aditya' or end with the word 'tata'.
+/home/apdev/aditya> egrep -c '^aditya|services$' file2.txt
+2
+
+16. Use of commands : tar, free, du, df, su, sudo, scp, tail, head, find, mount:- 
+-------------------------------------------------------------------------------
+
+tar:
+-----
+	tar's basic syntax is
+
+	tar option(s) archive_name file_name(s)
+
+	1.creating archive files using tar.
+	-----------------------------------
+	syntax: tar -cvf <archive name> <list of files>
+	------
+	example:    /home/apdev/sagar> tar -cvf archive.tar whle1.sh whle2.sh								# c- create, v- show verbosely, f- for files
+	-------		whle1.sh
+				whle2.sh
+				/home/apdev/sagar> ls -l archive.tar
+				-rw-r--r-- 1 apdev apdev 10240 2014-07-28 12:00 archive.tar
+				
+																							(OR)
+				/home/apdev/sagar> tar -cvjf archive4.tar whle1.sh whle2.sh								# j- filter archive through bzip2 (use to decompress)
+				whle1.sh
+				whle2.sh
+				/home/apdev/sagar> ls -l archive4.tar
+				-rw-r--r-- 1 apdev apdev 354 2014-07-28 12:03 archive4.tar
+				
+				
+	2. extracting files from archive file:
+	--------------------------------------
+	syntax: tar -xvf <archive name>
+	------
+	example:	/home/apdev/sagar> tar -xvf archive.tar													# x- extract
+	--------	whle1.sh
+				whle2.sh
+				
+				
+	3. appending files into archive file:
+	-------------------------------------
+	syntax: tar -uvf <archive name> <files list>
+	-------
+	example:	/home/apdev/sagar> tar -uvf archive.tar whle3.sh										# u- update
+	--------	whle3.sh
+				/home/apdev/sagar> tar -tf archive.tar
+				whle1.sh
+				whle2.sh
+				whle3.sh
+				
+				
+	4. deleting file from archive file:
+	-----------------------------------
+	syntax: tar -f <archive name> --delete <files list>													# --delete -for deleting files
+	------
+	example:	/home/apdev/sagar> tar -tf archive.tar
+	--------	whle1.sh
+				whle2.sh
+				whle3.sh
+				/home/apdev/sagar> tar -f archive.tar --delete whle3.sh
+				/home/apdev/sagar> tar -tf archive.tar
+				whle1.sh
+				whle2.sh
+				
+				
+				
+free:
+-----
+	- display information about free and used memory on the system
+	
+	-b, --bytes :
+			Display output in bytes.
+			ex1 :	/home/apdev/sagar> free -b
+								total       used       free     shared    buffers     cached
+					Mem:    3144683520 2117062656 1027620864          0  263245824 1354260480
+					-/+ buffers/cache:  499556352 2645127168
+					Swap:   9253396480          0 9253396480
+					
+	-k, --kb :
+			Display output in kilobytes (KB). This is the default.
+			ex2 :	/home/apdev/sagar> free -k
+								total       used       free     shared    buffers     cached
+					Mem:       3070980    2067560    1003420          0     257076    1322520
+					-/+ buffers/cache:     487964    2583016
+					Swap:      9036520          0    9036520
+					
+	-m, --mb :
+			Display output in megabytes (MB).
+			ex3 :	/home/apdev/sagar> free -m
+								total       used       free     shared    buffers     cached
+					Mem:          2999       2019        979          0        251       1291
+					-/+ buffers/cache:        476       2522
+					Swap:         8824          0       8824
+					
+	-g, --gb :
+			Display output in gigabytes (GB).
+			ex4 :	/home/apdev/sagar> free -g
+									total       used       free     shared    buffers     cached
+					Mem:             2          1          0          0          0          1
+					-/+ buffers/cache:          0          2
+					Swap:            8          0          8
+					
+	-l, --lowhigh :
+			Display detailed information about low vs. high memory usage.
+			ex5 :	/home/apdev/sagar> free -l
+								total       used       free     shared    buffers     cached
+					Mem:       3070980    2067436    1003544          0     257076    1322520
+					Low:        856824     419960     436864
+					High:      2214156    1647476     566680
+					-/+ buffers/cache:     487840    2583140
+					Swap:      9036520          0    9036520
+					
+	-o, --old :
+			Use old format. Specifically, do not display -/+ buffers/cache.
+			ex6 :	/home/apdev/sagar> free -o
+								total       used       free     shared    buffers     cached
+					Mem:       3070980    2067460    1003520          0     257076    1322520
+					Swap:      9036520          0    9036520
+					
+	-t, --total :
+			Display total summary for physical memory + swap space.
+			ex7 :	/home/apdev/sagar> free -t
+								total       used       free     shared    buffers     cached
+					Mem:       3070980    2067460    1003520          0     257076    1322520
+					-/+ buffers/cache:     487864    2583116
+					Swap:      9036520          0    9036520
+					Total:    12107500    2067460   10040040
+					
+	-s n, --repeat=n :
+			Repeat, pausing every n seconds in-between.
+			ex8 :	/home/apdev/sagar> free -s2
+								total       used       free     shared    buffers     cached
+					Mem:       3070980    2067560    1003420          0     257076    1322524
+					-/+ buffers/cache:     487960    2583020
+					Swap:      9036520          0    9036520
+
+								total       used       free     shared    buffers     cached
+					Mem:       3070980    2067568    1003412          0     257076    1322524
+					-/+ buffers/cache:     487968    2583012
+					Swap:      9036520          0    9036520
+
+					^C
+					/home/apdev/sagar> 
+					
+du :
+----
+	-Summarize disk usage of each FILE, recursively for directories.		http://www.thegeekstuff.com/2012/06/du-command-examples/
+	
+	-a, --all :
+			write counts for all files, not just directories
+			ex1 :	/home/apdev/sagar> du -a
+					4	./function3.sh
+					4	./whle3.sh
+					12	./.demodsr.swp
+					12	./.pal2.swp
+					4	./disktest.sh
+					4	./addition.pl
+					..................
+					
+					
+	-B, --block-size=SIZE : 
+			use SIZE-byte blocks
+			ex2 :	/home/apdev/sagar> du -B20
+					205	./sagar3
+					205	./ultimate/20140714
+					410	./ultimate
+					410	./sagar2
+					205	./vjj
+					205	./vjj2
+					205	./1212
+					16384	.
+					
+					
+	-b, --bytes :
+			print size in bytes
+			ex3 :	/home/apdev/sagar> du -b
+					4096	./sagar3
+					4096	./ultimate/20140714
+					8192	./ultimate
+					4406	./sagar2
+					4096	./vjj
+					4096	./vjj2
+					4096	./1212
+					97277	.
+					
+					
+	-c, --total :
+			produce a grand total
+			ex4 :	/home/apdev/sagar> du -c
+					4	./sagar3
+					4	./ultimate/20140714
+					8	./ultimate
+					8	./sagar2
+					4	./vjj
+					4	./vjj2
+					4	./1212
+					320	.
+					320	total
+					
+					
+	
+	-h, --human-readable :
+			print sizes in human readable format
+			ex5 :	/home/apdev/sagar> du -h
+			4.0K	./sagar3
+			4.0K	./ultimate/20140714
+			8.0K	./ultimate
+			8.0K	./sagar2
+			4.0K	./vjj
+			4.0K	./vjj2
+			4.0K	./1212
+			320K	.
+			
+			
+	-H, --si :
+			likewise, but use powers of 1000 not 1024
+			ex6 :	/home/apdev/sagar> du --si
+					4.1k	./sagar3
+					4.1k	./ultimate/20140714
+					8.2k	./ultimate
+					8.2k	./sagar2
+					4.1k	./vjj
+					4.1k	./vjj2
+					4.1k	./1212
+					328k	.
+					
+					
+	-k :
+			like --block-size=1K
+			ex7 :	/home/apdev/sagar> du -k
+					4	./sagar3
+					4	./ultimate/20140714
+					8	./ultimate
+					8	./sagar2
+					4	./vjj
+					4	./vjj2
+					4	./1212
+					320	.
+					
+					
+	-S, --separate-dirs :
+			do not include size of subdirectories
+			ex8 :	/home/apdev/sagar> du -S sagar2
+					4	sagar2/sagar4
+					8	sagar2
+					
+					
+	-s, --summarize :
+			display only a total for each argument
+			ex9 :	/home/apdev/sagar> du -s
+					324	.
+					
+					
+	-x, --one-file-system :
+			skip directories on different filesystems
+			ex10 :	/home/apdev/sagar> du -x sagar3
+					4	sagar3
+							
+			
+			
+df :
+----
+	-The ‘df‘ command stand for “disk filesystem“, it is used to get full summary of available and used disk space usage of file system on Linux system.
+	
+	1. check filesysem disk space usage
+		-displays the information of device name, total blocks(total disk space), used disk space, available disk space, disk usage % and mount points on a file system
+		
+		ex :	/home/apdev/sagar> df
+				Filesystem           1K-blocks      Used Available Use% Mounted on
+				/dev/sda1            231467956  24068928 195641060  11% /
+				tmpfs                  1535488         0   1535488   0% /lib/init/rw
+				varrun                 1535488       116   1535372   1% /var/run
+				varlock                1535488         0   1535488   0% /var/lock
+				udev                   1535488       180   1535308   1% /dev
+				tmpfs                  1535488        88   1535400   1% /dev/shm
+				lrm                    1535488      2192   1533296   1% /lib/modules/2.6.28-19-generic/volatile
+				
+	2. display information of all file system disk apace usage
+		- it also displays information of dummy file systems along with all the file system disk usage and their memory utilization.
+		
+		ex :	/home/apdev/sagar> df -a
+				Filesystem           1K-blocks      Used Available Use% Mounted on
+				/dev/sda1            231467956  24068928 195641060  11% /
+				tmpfs                  1535488         0   1535488   0% /lib/init/rw
+				proc                         0         0         0   -  /proc
+				sysfs                        0         0         0   -  /sys
+				varrun                 1535488       116   1535372   1% /var/run
+				varlock                1535488         0   1535488   0% /var/lock
+				udev                   1535488       180   1535308   1% /dev
+				tmpfs                  1535488        88   1535400   1% /dev/shm
+				devpts                       0         0         0   -  /dev/pts
+				fusectl                      0         0         0   -  /sys/fs/fuse/connections
+				lrm                    1535488      2192   1533296   1% /lib/modules/2.6.28-19-generic/volatile
+				securityfs                   0         0         0   -  /sys/kernel/security
+				binfmt_misc                  0         0         0   -  /proc/sys/fs/binfmt_misc
+				gvfs-fuse-daemon             0         0         0   -  /home/apdev/.gvfs
+				
+	3. show disk space usage in human readable format
+		- it provides an option to display sizes in Human Readable formats
+		
+		ex :	/home/apdev/sagar> df -h
+				Filesystem            Size  Used Avail Use% Mounted on
+				/dev/sda1             221G   23G  187G  11% /
+				tmpfs                 1.5G     0  1.5G   0% /lib/init/rw
+				varrun                1.5G  116K  1.5G   1% /var/run
+				varlock               1.5G     0  1.5G   0% /var/lock
+				udev                  1.5G  180K  1.5G   1% /dev
+				tmpfs                 1.5G   88K  1.5G   1% /dev/shm
+				lrm                   1.5G  2.2M  1.5G   1% /lib/modules/2.6.28-19-generic/volatile
+				
+	4. display information of file system in kb
+		
+		ex :	/home/apdev/sagar> df -k
+				Filesystem           1K-blocks      Used Available Use% Mounted on
+				/dev/sda1            231467956  24068928 195641060  11% /
+				tmpfs                  1535488         0   1535488   0% /lib/init/rw
+				varrun                 1535488       116   1535372   1% /var/run
+				varlock                1535488         0   1535488   0% /var/lock
+				udev                   1535488       180   1535308   1% /dev
+				tmpfs                  1535488        88   1535400   1% /dev/shm
+				lrm                    1535488      2192   1533296   1% /lib/modules/2.6.28-19-generic/volatile
+				
+	5. display information of file system in Mb
+	
+		ex :	/home/apdev/sagar> df -m
+				Filesystem           1M-blocks      Used Available Use% Mounted on
+				/dev/sda1               226043     23505    191056  11% /
+				tmpfs                     1500         0      1500   0% /lib/init/rw
+				varrun                    1500         1      1500   1% /var/run
+				varlock                   1500         0      1500   0% /var/lock
+				udev                      1500         1      1500   1% /dev
+				tmpfs                     1500         1      1500   1% /dev/shm
+				lrm                       1500         3      1498   1% /lib/modules/2.6.28-19-generic/volatile
+				
+	6. display file system inodes
+	
+		ex :	/home/apdev/sagar> df -i
+				Filesystem            Inodes   IUsed   IFree IUse% Mounted on
+				/dev/sda1            14704640  154379 14550261    2% /
+				tmpfs                 214206       3  214203    1% /lib/init/rw
+				varrun                214206      67  214139    1% /var/run
+				varlock               214206       2  214204    1% /var/lock
+				udev                  214206    1784  212422    1% /dev
+				tmpfs                 214206       2  214204    1% /dev/shm
+				lrm                   214206      17  214189    1% /lib/modules/2.6.28-19-generic/volatile
+				
+	7. display file system type
+	
+		ex :	/home/apdev/sagar> df -T
+				Filesystem    Type   1K-blocks      Used Available Use% Mounted on
+				/dev/sda1     ext3   231467956  24068928 195641060  11% /
+				tmpfs        tmpfs     1535488         0   1535488   0% /lib/init/rw
+				varrun       tmpfs     1535488       116   1535372   1% /var/run
+				varlock      tmpfs     1535488         0   1535488   0% /var/lock
+				udev         tmpfs     1535488       180   1535308   1% /dev
+				tmpfs        tmpfs     1535488        88   1535400   1% /dev/shm
+				lrm          tmpfs     1535488      2192   1533296   1% /lib/modules/2.6.28-19-generic/volatile
+				
+	8. include certain file system types
+	
+		ex :	/home/apdev/sagar> df -t ext3
+				Filesystem           1K-blocks      Used Available Use% Mounted on
+				/dev/sda1            231467956  24068932 195641056  11% /
+				
+	9. exclude certain file system types
+	
+		ex :	/home/apdev/sagar> df -x tmpfs
+				Filesystem           1K-blocks      Used Available Use% Mounted on
+				/dev/sda1            231467956  24068932 195641056  11% /
+				
+				
+su :
+----
+	-The su command, also referred to as substitute user, super user, or switch user, allows a computer operator to change the current user account associated with 
+	the running virtual console. By default, and without any other command line argument, this will elevate the current user to the superuser of the local system.
+	 
+	1. change the ownership of a login session to root
+		
+		ex :	/home/apdev/sagar> su
+				Password: 
+				root@3upc210-desktop:/home/apdev/sagar# exit
+				exit
+				/home/apdev/sagar>
+				
+	2. change the ownership of a login session to other user
+	
+		ex :	/home/apdev/sagar> su apdev
+				Password: 
+				apdev@3upc210-desktop:~/sagar$ exit
+				exit
+				/home/apdev/sagar>
+				
+scp :
+-----
+	-scp(secure copy) allows files to be copied to, from, or between different hosts. It uses ssh for data transfer and provides the same authentication and same level
+    of security as ssh.
+	
+	1. Copy the file "disktest.sh" from a remote host to the local host
+	
+		ex :	/home/apdev/sagar/sagar2> ls
+				v1  v2  v3
+				/home/apdev/sagar/sagar2> scp apdev@10.59.21.53:aditya/disktest.sh /home/apdev/sagar/sagar2
+				apdev@10.59.21.53's password: 
+				disktest.sh                                                                                                                                  100%  310     0.3KB/s   00:00    
+				/home/apdev/sagar/sagar2> ls
+				disktest.sh  v1  v2  v3
+				
+	2. copy the file "for1.sh" from local host to remote host
+	
+		ex :	/home/apdev/aditya/aaa> ls
+				aaaaa
+				/home/apdev/aditya/aaa> cd ../../sagar
+				/home/apdev/sagar> scp for1.sh apdev@10.59.21.53:/home/apdev/aditya/aaa
+				apdev@10.59.21.53's password: 
+				for1.sh                                                                                                                                      100%    0     0.0KB/s   00:00    
+				/home/apdev/sagar> cd ../aditya/aaa
+				/home/apdev/aditya/aaa> ls
+				aaaaa  for1.sh
+				
+	3. copy a directory from local hosrt to remote host
+	
+		ex :	/home/apdev/aditya/aaa> ls
+				aaaaa  for1.sh
+				/home/apdev/aditya/aaa> cd ../../sagar
+				/home/apdev/sagar> scp -r sagar2 apdev@10.59.21.53:/home/apdev/aditya/aaa
+				apdev@10.59.21.53's password: 
+				disktest.sh                                                                                                                                  100%  310     0.3KB/s   00:00    
+				v3                                                                                                                                           100%    0     0.0KB/s   00:00    
+				v2                                                                                                                                           100%    0     0.0KB/s   00:00    
+				v1                                                                                                                                           100%    0     0.0KB/s   00:00    
+				/home/apdev/sagar> cd ../aditya/aaa
+				/home/apdev/aditya/aaa> ls
+				aaaaa  for1.sh  sagar2
+				
+	4. copy multiple files from remote host to local host
+	
+		ex :	/home/apdev/sagar/sagar3> ls
+				v1  v3  v4
+				/home/apdev/sagar/sagar3> scp apdev@10.59.21.53:/home/apdev/aditya/\{sample10,sample11,sample12\} .
+				apdev@10.59.21.53's password: 
+				sample10                                                                                                                                     100%  238     0.2KB/s   00:00    
+				sample11                                                                                                                                     100%  225     0.2KB/s   00:00    
+				sample12                                                                                                                                     100%  143     0.1KB/s   00:00    
+				/home/apdev/sagar/sagar3> ls
+				sample10  sample11  sample12  v1  v3  v4
+				
+				
+tail :
+------
+	- is used to display the tail end of a text file or piped data.
+	  syntax : tail [options] <file_name>
+	  
+		ex :	/home/apdev/sagar> tail -5 happy																	# printing last 5 lines of a file
+				echo can i talk to you for some time
+				echo what can i do for  you
+				echo bye
+
+
+		ex :	/home/apdev/sagar> ls | tail -5																		# printing last five lines of ls command output
+				whle1.sh
+				whle2.sh
+				whle3.sh
+				whlemarks.sh
+				xfile
+				
+				
+head :
+------
+	- is used to display the beginning of a text file or piped data.
+	  syntax : head [options] <file_name>
+	  
+		ex :	/home/apdev/sagar> head -4 happy																	# printing first 4 lines of a file
+				echo hi 
+				echo how are you?
+				echo i am fine...
+				echo iam so glad to meet you..
+				
+				
+		ex :	/home/apdev/sagar> ls | head -4																		# printing first 4 lines of ls command output
+				*
+				\
+				100
+				1212
+				
+				
+find :							http://www.tecmint.com/35-practical-examples-of-linux-find-command/
+------
+	-Find command used to search and locate list of files and directories based on conditions you specify for files that match the arguments.
+	
+		ex :	/home/apdev/sagar> find -name "*.exp"														# finding all files having the names ending with ".exp"
+				./lgin.exp
+				
+				
+		ex :	/home/apdev/sagar> find / -name "*.txt"														# searches from the root
+				/home/apdev/aditya_757389/mysystem.sh.txt
+				/home/apdev/aditya_757389/weight.sh.txt
+				/home/apdev/aditya_757389/w.txt
+				/home/apdev/aditya_757389/case.sh.txt
+				/home/apdev/aditya_757389/student.txt
+				.....................................
+				
+		ex :	/home/apdev/sagar> find -iname "*.lib"														# ignores the case sensitivity
+				./1.lib
+				./add.LIB
+				./common.lib
+				
+		ex :	/home/apdev/sagar> find . -mtime 2															# files which are modified on the last 2nd day from today 
+				.
+				./disktest.sh
+				./archive4.tar
+				./add.LIB
+				./archive.tar
+				./sagar3
+				./archive1.tar
+				.................
+				
+		ex :	/home/apdev/sagar> find . -atime 2															# files which are accessed on the last 2nd day from today 				.
+				./disktest.sh
+				./archive4.tar
+				./for3.sh
+				./add.LIB
+				./archive.tar
+				./sagar3
+				./for2.sh
+				./whle2.sh
+				................
+				
+		ex :	/home/apdev/sagar> find . -mtime +4 -mtime -6												# files modified in last 6-4 days
+				./function3.sh
+				./1.lib
+				./common.sh
+				./1.sh
+				./source1.sh
+				./for6.sh
+				./for5.sh
+				./common.lib
+				./function2.sh
+				./pid.sh
+				
+		ex :	/home/apdev/sagar> find . -cmin -60															# files changed in last 1 hour.  modified : -mmin, accessed : -amin
+				.
+				./add.LIB
+				./happy
+				
+		ex :	/home/apdev/sagar> find -size -1M															# files having less than 1 MB size 
+				./add.LIB
+				./100
+				./*
+				./sagar3/v4
+				./sagar3/v3
+				./sagar3/v1
+				./ex1.sh
+				...........
+				
+		ex :	/home/apdev/sagar> find -type d																# lists all directories
+				.
+				./sagar3
+				./ultimate
+				./ultimate/20140714
+				./sagar2
+				./vjj
+				./vjj2
+				./1212
+				
+				
+		ex :	/home/apdev/sagar> find -type f																# lists all files
+				./function3.sh
+				./whle3.sh
+				./.demodsr.swp
+				./.pal2.swp
+				./disktest.sh
+				./addition.pl
+				
+		ex :	/home/apdev/sagar> find . -user apdev -name "*.exp"											# files having user name "apdev" and extension ".exp".
+				./lgin.exp																						for group : -group
+		
+		ex :	/home/apdev/sagar> find -type f -name ".*"													# finding all hidden files
+				./.demodsr.swp
+				./.pal2.swp
+				
+		ex :	/home/apdev/sagar> find -type f -empty														# finding all empty files. for directories : -type d
+				./add.LIB
+				./100
+				./*
+				./sagar3/v4
+				./sagar3/v3
+				./sagar3/v1
+				./ex1.sh
+				...........
+				
+		ex :	/home/apdev/sagar> find -type f -perm 774 -print -exec chmod 664 {} \;						# finding files having permission 774 and changing them to 664.
+				./for3.sh																							for directories : -type d
+				./for2.sh
+				./for1.sh
+				/home/apdev/sagar> ls -l for3.sh for2.sh  for1.sh 
+				-rw-rw-r-- 1 apdev apdev   0 2014-07-24 11:51 for1.sh
+				-rw-rw-r-- 1 apdev apdev 121 2014-07-14 15:28 for2.sh
+				-rw-rw-r-- 1 apdev apdev 115 2014-07-24 09:59 for3.sh
+				
+17. Writing to syslog:-  http://www.techiecorner.com/1496/how-to-send-message-to-syslog-server/   http://www.cyberciti.biz/tips/howto-linux-unix-write-to-syslog.html
+----------------------
+what is a syslog?
+-----------------
+syslog is the protocol as well as application to send message to Linux system logfile located at /var/log directory. 
+
+To write a simple message to the /var/log/messages file, in a simple shell script we created:   #!/bin/bash
+																								logger "hello world!"
+																								
+logger logs to syslog facilities. If you want the message to go to a particular file you have to modify the syslog configuration accordingly.
+Suppose if i want to stop throwing messages into the default /var/log/messages file, and create my own /var/log/mycustomlog.
+If you want the message to go to a particular file you have to modify the syslog configuration accordingly.
+Without making changes to the syslog configuration you could use logger like this:  " logger -s "foo bar" 2>> /var/log/mycustomlog "
+This would instruct logger to print the message to STDERR as well (in addition to logging it to syslog), so you could redirect STDERR to a file.
+
+How to send messages to syslog server?
+--------------------------------------
+Once syslog server is up, you can send a message to your syslog server to test if it’s working. Just a simple command and you’ll send a message to syslog server.
+To send message to syslog server, follow the steps below: 1. Start your terminal
+														  2. Run the command below to send a UDP message to your syslog server
+															 nc -w0 -u 192.168.0.1 514 <<< "testing again from my home machine"
+replace the ip 192.168.0.1 to your syslog server IP. -w0 set timeout to zero second, -u is to use UDP protocol, 514 represent port 514.
+Now check your log at the syslog server, you should see the message you just send. 
+
+Logger command:
+--------------
+Use logger command which is a shell command interface to the syslog system log module. It makes or writes one line entries in the system log file from the command line.
+Log message System rebooted for hard disk upgrade:  $ logger System rebooted for hard disk upgrade
+You can see message in /var/log/message file     :  # tail -f /var/log/message															 
+Output  										 :  Jul 31 11:12:39 3upc210-desktop apdev: System rebooted for hard disk upgrade   
+
+other usage:
+-----------
+To log a message contained in the /var/log/myapp.log file, use        :  $ logger -f /var/log/myapp.log
+Log the message to standard error (screen), as well as the system log :  $ logger -s "Hard disk full"
+
+
+18. Remote command execution (via ssh):-  http://www.cyberciti.biz/faq/unix-linux-execute-command-using-ssh/    http://unix.stackexchange.com/questions/87405/how-can-i-execute-local-script-on-remote-machine-and-include-arguments   http://thornelabs.net/2013/08/21/simple-ways-to-send-multiple-line-commands-over-ssh.html
+---------------------------------------
+Run command using SSH:-
+---------------------
+The SSH client program can be used for logging into a remote machine or server and for executing commands on a remote machine.
+When the command is specified, it is executed on the remote host/server instead of a login shell. 
+syntax for executing commands over ssh is:  ssh user1@server1 command1
+											ssh user1@server1 'command2'
+											ssh user1@server1 'command1 | command2'
+The ssh client will login to a server called server1, using user name called user1 and run a command call command1.
+Ex:- run commands over ssh
+1. Get remote server date and time:   /home/apdev/aditya> ssh apdev@10.59.21.53 date
+									  apdev@10.59.21.53's password: 
+									  Tue Jul 29 11:30:55 IST 2014											
+2. Find out remote server disk space usage:  /home/apdev/aditya> ssh apdev@10.59.21.53 'df -H'
+											 apdev@10.59.21.53's password: 
+											 Filesystem             Size   Used  Avail Use%  Mounted on
+											 /dev/sda1              238G    25G   201G  11%  /
+											    tmpfs               1.6G      0   1.6G   0%  /lib/init/rw
+											    varrun              1.6G   119k   1.6G   1%  /var/run
+											    varlock             1.6G      0   1.6G   0%  /var/lock
+3. /home/apdev/aditya> vi 1.sh
+   /home/apdev/aditya> cat 1.sh 
+                       #!/bin/bash
+                       echo $1 $2 											
+   /home/apdev/aditya> ssh apdev@10.59.21.53 "bash -s" < ./1.sh "hi" "bye"
+                       apdev@10.59.21.53's password: 
+                       hi bye
+   /home/apdev/aditya> ssh apdev@10.59.21.53 "bash -s" < ./1.sh "--time" "bye" 
+                       apdev@10.59.21.53's password: 
+                       bash: --: invalid option										
+   The problem you're encountering is that the argument, -time, or --time in this example, is being interpreted as a switch to bash -s.
+   You can pacify bash by terminating it from taking any of the remaining command line arguments for itself using the -- argument.
+#1 /home/apdev/aditya> ssh apdev@10.59.21.53 "bash -s" --  < ./1.sh "--time" "bye"
+					   apdev@10.59.21.53's password: 
+					   --time bye
+#2 /home/apdev/aditya> ssh apdev@10.59.21.53 "bash -s" --  < ./1.sh "-time" "bye"
+					   apdev@10.59.21.53's password: 
+					   -time bye
+#3 /home/apdev/aditya> ssh < ./1.sh apdev@10.59.21.53 "bash -s -- --time end"
+					   apdev@10.59.21.53's password: 
+					   --time end
+Note:- Just to make it clear that wherever the redirection appears on the command line makes no difference, because ssh calls a remote shell with the concatenation of 
+       its arguments anyway, quoting doesn't make much difference, except when you need quoting on the remote shell like in example #3.
+   /home/apdev/aditya> ssh < ./1.sh apdev@10.59.21.53 "bash -s -- '<--time>' '<end>'"
+                       apdev@10.59.21.53's password: 
+                       <--time> <end>
+					   
+Simple ways to send multiple commands over SSH:-
+----------------------------------------------
+There are three methods to send multiple line commands over SSH :  1. The first method is a quick overview of running remote commands over SSH
+																   2. The second method uses the bash command to run remote commands over SSH
+																   3. Third method uses HERE documents to run remote commands over SSH.
+To run one command  on a remote server over SSH:  ssh $HOST ls
+To run two commands on a remote server over SSH:  ssh $HOST 'ls; pwd'
+To run the third, fourth, fifth, etc. commands on a remote server over SSH keep on appending commands with a semicolon inside the single quotes.
+
+If you want to remotely run many more commands, or if statements, or while loops, etc., and make it all readable?
+EX:-  /home/apdev/aditya> cat 2.sh
+#!/bin/bash
+
+ssh apdev@10.59.21.53 '
+ls
+
+pwd
+
+if true; then
+    echo "This is true"
+else
+    echo "This is false"
+fi
+
+echo "Hello world"
+'
+output:
+------
+/home/apdev/aditya> ./2.sh
+apdev@10.59.21.53's password: 
+/
+10319
+12996-devint
+.
+.
+wrk.txt
+xss.cap
+/home/apdev
+This is true
+Hello world
+The above shell script works but begins to break if local variables are added.
+
+Ex:- /home/apdev/aditya> cat 3.sh
+#!/bin/bash
+
+HELLO="world"
+ssh apdev@10.59.21.53 '
+ls
+
+pwd
+
+if true; then
+    echo "HELLO"
+else
+    echo "This is false"
+fi
+
+echo "Hello world"
+'
+output:
+------
+/home/apdev/aditya> chmod 777 3.sh
+/home/apdev/aditya> ./3.sh
+apdev@10.59.21.53's password: 
+\
+10319
+12996-devint
+.
+.
+wrk.txt
+xss.cap
+/home/apdev
+
+Hello world
+
+Note:- The above shell script will run, but the local variable HELLO will not be parsed inside the remote if statement.
+
+Using SSH with BASH statement:-
+-----------------------------
+In order to parse the local variable HELLO so it is used in the remote if statement, the bash command should be used.
+/home/apdev/aditya> cat 4.sh
+#!/bin/bash
+
+HELLO="world"
+
+ssh apdev@10.59.21.53 bash -c "'
+ls
+
+pwd
+
+if true; then
+    echo "$HELLO"
+else
+    echo "This is false"
+fi
+
+echo "Hello world"
+'"
+output:
+-------
+/home/apdev/aditya> ./4.sh
+apdev@10.59.21.53's password: 
+\
+10319
+12996-devint
+.
+.
+wrk.txt
+xss.cap
+/home/apdev
+world
+Hello world
+
+Using SSH with HERE Documents:-
+------------------------------
+suppose if i want to use one specific remote sed command over SSH to find and delete one line and the subsequent three lines and another specific remote sed command -
+over SSH to find a line and insert another line with some text above it.
+Ex:/home/apdev/aditya> cat 5.sh
+#!/bin/bash
+
+ssh apdev@10.59.21.53 bash -c "'
+cat << EOFTEST1 > /tmp/test1
+line one
+line two
+line three
+line four
+EOFTEST1
+
+cat << EOFTEST2 > /tmp/test2
+line two
+EOFTEST2
+
+sed -i -e '/line one/,+3 d' /tmp/test1
+
+sed -i -e '/^line two$/i line one' /tmp/test2
+'"
+output:-
+-------
+/home/apdev/aditya> ./5.sh
+apdev@10.59.21.53's password: 
+sed: -e expression #1, char 5: unterminated address regex
+It is showing some error as above. This problem is may be because of single quotes within single quotes.
+
+Note: a single quote may not occur between single quotes, even when preceded by a backslash 
+
+solution:
+---------
+/home/apdev/aditya> cat 5.sh
+#!/bin/bash
+
+ssh -T apdev@10.59.21.53 << EOF 
+cat << EOFTEST1 > /tmp/test1
+line one
+line two
+line three
+line four
+EOFTEST1
+
+cat << EOFTEST2 > /tmp/test2
+line two
+EOFTEST2
+
+sed -i -e '/line one/,+3 d' /tmp/test1
+
+sed -i -e '/^line two$/i line one' /tmp/test2
+EOF
+
+add the -T command line switch to the ssh command to disable pseudo-tty allocation.
+
+The remote sudo commands that require a password prompt will not work with HERE documents over SSH.
+Ex:  /home/apdev/aditya> ssh apdev@10.59.21.53 << EOF
+> sudo ls /root
+> EOF
+apdev@10.59.21.53's password: 
+[sudo] password for apdev: 
+/home/apdev/aditya>
+
+19. Basic one-liners of sed and awk for common/useful scenarios :-  http://www.catonmat.net/blog/sed-one-liners-explained-part-one/  http://www.catonmat.net/blog/awk-one-liners-explained-part-one/
+----------------------------------------------------------------
+SED one-liners:-
+--------------
+We all are only familiar with one particular command of sed,namely "s"(substitute)comand "s/comand/command/". Sed has at least 20 different commands for you.
+We can divide sed one-liners into 3 parts:  1. File Spacing
+											2. Numbering
+											3. Text conversion and Substitution							
+1. File Spacing:-
+---------------
+Double space a file:  sed G
+-------------------
+This sed one-liner uses the 'G' command. It appends a newline followed by the contents of hold buffer. In this example the hold buffer is empty all the time
+(only three commands 'h', 'H' and 'x' modify hold buffer), so we end up simply appending a newline to the pattern space. Once all the commands have been processed 
+(in this case just the 'G' command), sed puts the contents of pattern space to output stream followed by a newline. There we have it, two newlines -- one added by 
+the 'G' command and the other by output stream. File has been double spaced.
+
+EX:- /home/apdev/aditya> ls -l  | sed G
+total 792
+
+-rw-r--r-- 1 apdev apdev   112 2014-07-03 11:29 \
+
+-rw-r--r-- 1 apdev apdev     0 2014-07-24 10:04 1
+
+-rwxrwxrwx 1 apdev apdev   148 2014-07-24 14:34 11.sh
+
+2. sed '/^$/d;G': Double-space a file which already has blank lines in it. Do it so that the output contains no more than two blank line between two lines of text.
+ex:- /home/apdev/aditya> cat > 8.sh
+aditya
+manoj
+
+kantamraju
+
+
+tata consultancy services
+
+
+
+gachibowli
+o/p:- /home/apdev/aditya> cat 8.sh | sed '/^$/d;G' 
+aditya
+
+manoj
+
+kantamraju
+
+tata consultancy services
+
+gachibowli
+
+/home/apdev/aditya> 
+
+In the above example i created a file like no space between first two lines,one space between next two lines,two spaces between next lines and 3 spaces between last lines.
+but, the output is sepearted by 2 spaces for each line.
+Sed allows to restrict commands only to certain lines. This one-liner operates only on lines that match a regular expression /^$/. Which are those? Those are the empty lines.
+
+Triple space a file:-   sed 'G;G'
+---------------------
+Several sed commands can be combined by separating them by ';'. Such commands get executed one after another. 
+This one-liner does twice what the one-liner #1 does -- appends two newlines (via two 'G' commands) to output.
+Ex:- /home/apdev/aditya> cat > 9.sh
+aditya
+manoj
+kantamraju
+/home/apdev/aditya> cat 9.sh | sed 'G;G'
+aditya
+
+
+manoj
+
+
+kantamraju
+
+
+/home/apdev/aditya> 
+
+Undo double spacing:-     sed 'n;d'
+-------------------
+This one-liner assumes that even-numbered lines are always blank. It uses two new commands - 'n' and 'd'. The 'n' command prints out the current pattern space 
+We assumed that even-numbered lines are always blank. This means that 'n' prints the first, third, fifth, ..., etc. line and reads in the following line.
+Now the 'd' command gets executed. The 'd' command deletes the current pattern space, reads in the next line, puts the new line into the pattern space and aborts 
+the current command, and starts the execution from the first sed command. Now the the 'n' commands gets executed again, then 'd', then 'n', etc.
+Ex:-/home/apdev/aditya> cat > 10.sh
+aditya
+manoj
+
+kan
+
+
+tam
+/home/apdev/aditya> cat 10.sh | sed 'n;d'
+aditya
+
+
+tam
+
+like above we have so may things in file spacing sed one-liners. they are :  Insert a blank line above every line that matches "regex".
+																			 Insert a blank line below every line that matches "regex".
+																			 Insert a blank line above and below every line that matches "regex".
+
+2.Numbering:-
+-------------
+Number each line of a file & Left align the number:   sed = filename | sed 'N;s/\n/\t/'
+--------------------------------------------------
+This one-liner is actually two separate one-liners. The first sed one-liner uses a new command called '='. 
+This command operates directly on the output stream and prints the current line number. There is no way to capture the current line number to pattern space. 
+That's why the second one-liner gets called. The output of first one-liner gets piped to the input of second. 
+The second one-liner uses another new command 'N'. The 'N' command appends a newline and the next line to current pattern space. 
+Then the famous 's///' command gets executed which replaces the newline character just appended with a tab. After these operations the line gets printed out.
+
+step 1: what '=' does, take a look at this example file: line one
+														 line two
+														 line three
+step 2: Running the first one-liner 'sed = filename', produces output: 1
+																	   line one
+																	   2
+																	   line two
+																	   3
+																	   line three
+Step 3: Now, the 'N' command of the second one-liner joins these lines with a newline character: 1\nline one
+																								 2\nline two
+																								 3\nline three
+Step 4: The 's/\n/\t/' replaces the newline chars with tabs, so we end up with: 1     line one
+																				2     line two
+																				3     line three
+Ex:/home/apdev/aditya> cat > ex1.sh
+line one
+line two
+line thrwe
+/home/apdev/aditya> sed = ex1.sh | sed 'N;s/\n/\t/'
+1	line one
+2	line two
+3	line thrwe
+
+Number each line of a file & Right align the number:-  sed = filename | sed 'N; s/^/     /; s/ *\(.\{6,\}\)\n/\1  /'
+---------------------------------------------------
+This one-liner is also actually two one-liners. The first one liner numbers the lines, The second one-liner uses the 'N' command to join the line containing  the line 
+no with the actual line. Then it uses two substitute commands to right align the number. The first 's' command 's/^/ /' appends 5 white-spaces to the beginning of line.
+The second 's' command 's/ *\(.\{6,\}\)\n/\1 /' captures at least six symbols up to a newline and replaces the capture and newline with the back-reference '\1' 
+and two more whitespace to separate line number from the contents of line.
+
+look at an example. For clearness I replaced the '\n' newline char with a '@' and whitespace with '-'.
+EX:-  $ echo "-----12@contents" | sed 's/-*\(.\{6,\}\)@/\1--/'
+	  ----12--contents
+
+The regular expression '-*\(.\{6,\}\)@' tells sed to match some '-' characters followed by at least 6 other characters, followed by a '@' symbol. 
+Sed captures them (remembers them)in \1. 
+In this example sed matches the first '-' (the '-*' part of regex), then the following six characters "----12" and '@' (the '*\(.\{6,\}\)@' part of regex). 
+Now it replaces the matched part of the string "-----12@" with the contents of captured group which is "----12" plus two extra whitespace.
+The final result is that "-----12@" gets replaced with "----12--".
+
+Ex:  /home/apdev/aditya> sed = ex1.sh | sed 'N; s/^/     /; s/ *\(.\{6,\}\)\n/\1  /'
+     1  line one
+     2  line two
+     3  line thrwe
+	  
+Number each non-empty line of a file:-    sed '/./=' filename | sed '/./N; s/\n/\t /'
+-------------------------------------
+This one-liner is again two one-liners.The output of the first one-liner gets piped to the input of second.
+The first one-liner filters out lines with at least one character in them. The regular expression '/./' says: match lines with at least one char in them.
+The second one-liner does the same as one-liner "Number each line of a file and left allign the number" did, except that only numbered lines get joined and printed out.
+Command '/./N' makes sure that empty lines are left as-is.
+
+EX:- /home/apdev/aditya> sed '/./=' 11.sh | sed '/./N; s/\n/\t /'
+1	 aditya
+2	 manoj
+
+4	 kan
+
+
+7	 tam
+
+
+
+11	 raju/home/apdev/aditya> 
+
+Count the number of lines in a file (emulates "wc -l"):-  sed -n '$='
+-------------------------------------------------------
+This one-liner uses a command line switch "-n" to modify sed's behavior. The "-n" switch tells sed not to send the line to output after it has been processed 
+in the pattern space. In this one-liner what seems to be the command "$=" is actually a restriction pattern "$" together with the "=" command. 
+The restriction pattern "$" applies the "=" command to the last line only. The "=" command outputs the current line number to standard output.
+As it is applied to the last line only, this one-liner outputs the number of lines in the file.
+EX:- /home/apdev/aditya> sed -n '$='
+aditya
+manoj
+2
+
+3. Text conversion and substitution:-
+------------------------------------
+There are so many ways to convert n substitute text using sed one-liners section.
+
+Convert DOS/Windows newlines (CRLF) to Unix newlines (LF):   sed 's/.$//'
+---------------------------------------------------------
+This one-one liner assumes that all lines end with CR+LF (carriage return + line feed) and we are in a Unix environment.
+Once the line gets read into pattern space, the newline gets thrown away, so we are left with lines ending in CR.
+The 's/.$//' command erases the last character by matching the last character of the line (regex '.$') and substituting it with nothing.
+Now when the pattern space gets output, it gets appended the newline and we are left with lines ending with LF.
+EX:- /home/apdev/aditya> sed 's/.$//'
+tata consultancy services
+tata consultancy service
+tata
+tat
+ta ta ta at
+ta ta ta a
+
+Convert Unix newlines (LF) to DOS/Windows newlines (CRLF):     sed "s/$/`echo -e \\\r`/"
+----------------------------------------------------------
+This one-liner also assumes that we are in a Unix environment. It calls shell for help.'echo -e \\\r' command inserts a literal carriage return character in the sed expression.
+The sed "s/$/char/" command appends a character to the end of current pattern space.
+Ex:- /home/apdev/aditya> sed "s/$/`echo -e \\\r`/"
+aditya
+aditya
+gsg shskl jslaj ljclsd
+gsg shskl jslaj ljclsd
+
+Convert Unix newlines (LF) to DOS/Windows newlines (CRLF) from DOS/Windows:   sed "s/$//"  or  sed -n p  or  sed ''
+---------------------------------------------------------------------------
+/home/apdev/aditya> sed "s/$//"
+dncklm ccjdc
+dncklm ccjdc
+ dk;s
+ dk;s
+ 
+Delete leading whitespace (tabs and spaces) from each line:    sed 's/^[ \t]*//'
+----------------------------------------------------------- 
+It matches zero-or-more spaces and tabs at the beginning of the line and replaces them with nothing, i.e. erases them.
+Ex:/home/apdev/aditya> sed 's/^[ \t]*//'
+ aditya
+aditya
+	aditya
+aditya 
+
+Insert five blank spaces at the beginning of each line:     sed 's/^/     /'
+-------------------------------------------------------
+It does it by matching the null-string at the beginning of line (^) and replaces it with five spaces "     ".
+Ex:- ^[[/home/apdev/aditya> sed 's/^/     /'
+afgsxfhfx
+     afgsxfhfx
+
+Substitute the first occurrence of "foo" with "bar" on each line:   sed 's/foo/bar/'
+----------------------------------------------------------------- 
+This is the simplest sed one-liner possible. It uses the substitute command and applies it once on each line. It substitutes string "foo" with "bar".
+Ex: /home/apdev/aditya> sed 's/foo/bar/'
+ta foo ta con foo sultancy fo servi foo ces
+ta bar ta con foo sultancy fo servi foo ces
+
+for 3rd occurrence:   sed 's/foo/bar/3'
+------------------
+This one-liner uses a flag for the substitute command. With no flags the first occurrence of pattern is changed. With a numeric flag like "/1", "/2", etc. 
+only that occurrence is substituted. Here we are using "/3" i.e. 3rd occurrence of each line.
+Ex:-  /home/apdev/aditya> sed 's/foo/bar/3'
+ta foo ta con foo sultancy fo servi foo ces
+ta foo ta con foo sultancy fo servi bar ces
+
+for all occurrences:   sed 's/foo/bar/g'
+--------------------
+The "/g" flag which stands for global. With global flag set, substitute command does as many substitutions as possible, i.e., all.
+Ex: /home/apdev/aditya> sed 's/foo/bar/g'
+ta foo ta con foo sultancy fo servi foo ces
+ta bar ta con bar sultancy fo servi bar ces
+
+Substitute only the last occurrence of "foo" with "bar":    sed 's/\(.*\)foo/\1bar/'  
+--------------------------------------------------------
+This one-liner uses a capturing group that captures everything up to "foo". It replaces the captured group and "foo" with captured group itself (the \1 back-reference) and "bar".
+It results in the last occurrence of "foo" getting replaced with "bar".
+Ex: /home/apdev/aditya> sed 's/\(.*\)foo/\1bar/'  
+ta foo ta con foo sultancy fo servi foo ces
+ta foo ta con foo sultancy fo servi bar ces
+
+Substitute all occurrences of "foo" with "bar" on all lines that contain "baz":     sed '/baz/s/foo/bar/g'   
+-------------------------------------------------------------------------------
+This one-liner uses a regular expression to restrict the substitution to lines matching "baz". 
+The lines that do not match "baz" get simply printed out, but those that do match "baz" get the substitution applied.
+Ex: /home/apdev/aditya> sed '/baz/s/foo/bar/g'
+baz tata foo
+baz tata bar
+tata foo bar
+tata foo bar
+baz foo bar
+baz bar bar
+
+sed '/baz/!s/foo/bar/g'  Substitute all occurrences of "foo" with "bar" on all lines that DO NOT contain "baz".
+
+Change text "mango", "banana" or "grape" to "apple":   
+----------------------------------------------------  
+Simply just use three consecutive substitution commands.
+Ex: /home/apdev/aditya> sed 's/mango/apple/g;s/grape/apple/g;s/banana/apple/g'
+mango apple banana apple grape 
+apple apple apple apple apple 
+
+awk one liners :											http://www.catonmat.net/blog/awk-one-liners-explained-part-one/
+-------------------
+
+	1. line space
+		
+		1. double space a file
+		-----------------------
+		ex :	/home/apdev/sagar/sagar2> awk '1; { print "" }' reg.sh 													# prints double space between each two lines
+				hi my name is vjay
+
+				how are you
+
+				where have you been from
+
+				nice to meet you
+
+				see you
+
+				bye
+				
+		2. numbering and calculations
+		-------------------------------
+		ex :	/home/apdev/sagar/sagar2> awk '{ print NR "\t" $0 }' reg.sh 											# numbering lines in a file
+				1	hi my name is vjay
+				2	
+				3	how are you
+				4	
+				5	where have you been from
+				6	nice to meet you
+				7	see you
+				8	bye
+				
+		ex :	/home/apdev/sagar/sagar2> awk 'NF { $0=++a " :" $0 }; { print }' reg.sh 								# numbering only to the non-empty lines
+				1 :hi my name is vjay
+
+				2 :how are you
+
+				3 :where have you been from
+				4 :nice to meet you
+				5 :see you
+				6 :bye
+				
+		ex :	/home/apdev/sagar/sagar2> awk 'END { print NR }' reg.sh 												# counting number of lines in a file
+				9
+				
+		ex :	/home/apdev/sagar/sagar2> awk '{ s = 0; for (i = 1; i <= NF; i++) s = s+$i; print s }' num.sh			# prints the sum of fields in every lines
+				60
+				60
+				60
+				
+		ex :	/home/apdev/sagar/sagar2> awk '/ee/ { n++ }; END { print n+0 }' reg.sh 									# print number of lines containing "ee"
+				3
+				
+		ex :	/home/apdev/sagar/sagar2> awk '$1 > max { max=$1; maxline=$0 }; END { print max, maxline }' num.sh 			# prints line having largest(numeric) first field
+				15 15 15 30
+				
+		ex :	/home/apdev/sagar/sagar2> awk '{ print NF ":" $0 } ' reg.sh 											# print number of fields in each line
+				5:hi my name is vjay
+				0:
+				3:how are you
+				0:
+				5:where have you been from
+				4:nice to meet you
+				2:see you
+				1:bye
+				
+				
+		3. Text Conversion and Substitution
+		-----------------------------------
+		ex : # Delete leading whitespace (spaces and tabs) from the beginning of each line
+		
+				/home/apdev/sagar/sagar2> cat v1
+					hi
+								how are 	you ? 
+				/home/apdev/sagar/sagar2> awk '{ sub(/^[ \t]+/, ""); print }' v1										# for trailing : awk '{ sub(/[ \t]+$/, ""); print }' v1
+				hi
+				how are 	you ?																						# for both     : awk '{ gsub(/^[ \t]+|[ \t]+$/, ""); print }' v1
+				
+				
+		ex : # Insert 5 blank spaces at beginning of each line
+		
+				/home/apdev/sagar/sagar2> awk '{ sub(/^/, "     "); print }' v1
+				     hi				
+				     how are you ?			 
+				     where have you been from?
+					 
+					 
+		ex : # Align all text flush right on a 85-column width.
+		
+				/home/apdev/sagar/sagar2> awk '{ printf "%85s\n", $0 }' v1
+                                                                                   hi
+                                                                        how are you ?
+                                                            where have you been from?
+															
+															
+		ex : # Center all text on a 85-character width
+		
+				/home/apdev/sagar/sagar2> awk '{ l=length(); s=int((85-l)/2); printf "%"(s+l)"s\n", $0 }' v1
+                                         hi
+                                    how are you ?
+                              where have you been from?
+							  
+							  
+		ex : # Substitute (find and replace) "foo" with "bar" on each line
+		
+				/home/apdev/sagar/sagar2> awk '{ sub(/hi/,"hello"); print }' v1
+				hello
+				how are you ?
+				where have you been from?
+				
+				
+		ex : # Substitute "hi" with "hello" only on lines that contain "vijay"
+																												# for lines do not contain : awk '!/vijay/ { gsub(/hi/,"hello") }; { print }' v1
+				/home/apdev/sagar/sagar2> cat v1
+				hi
+				hi vijay
+				
+				/home/apdev/sagar/sagar2> awk '/vijay/ { gsub(/hi/,"hello") }; { print }' v1
+				hi
+				hello vijay
+				
+				
+		ex : # Substitute "it", "that" or "this" with "nothing"
+		
+				/home/apdev/sagar/sagar2> cat v1
+				it is impossible
+				that is more than your life
+				if you eat this  you will die
+				
+				/home/apdev/sagar/sagar2> awk '{ gsub( /it|that|this/,"nothing"); print }' v1
+				nothing is impossible
+				nothing is more than your life
+				if you eat nothing  you will die
+				
+				
+		ex : # Reverse the order of lines
+		
+				/home/apdev/sagar/sagar2> cat v1
+				can you please do me this favour?
+				yah sure.
+				
+				/home/apdev/sagar/sagar2> awk '{ a[i++] = $0 } END { for ( j=i-1; j>=0; ) print a[j--] }' v1
+				yah sure.
+				can you please do me this favour?
+				
+				
+		ex : # Join a line ending with a backslash with the next line
+		
+				/home/apdev/sagar/sagar2> cat v1
+				can you please do me this favour?\
+				yah sure.
+
+				/home/apdev/sagar/sagar2> awk '/\\$/ { sub(/\\$/,"" ); getline t; print $0 t;next  }; 1' v1
+				can you please do me this favour?yah sure.
+				
+				
+		ex : # Swap first field with second on every line
+		
+				/home/apdev/sagar/sagar2> cat v1
+				hi vj
+				can you please do me this favour?
+				yah sure.
+				
+				/home/apdev/sagar/sagar2> awk '{ temp = $1; $1 = $2; $2 = temp; print }' v1
+				vj hi
+				you can please do me this favour?
+				sure. yah
+				
+				
+		ex : # Delete the second field on each line
+		
+				/home/apdev/sagar/sagar2> awk '{ $2 = "";print }' v1
+				hi 
+				can  please do me this favour?
+				yah
+				
+				
+		ex : # Print the fields in reverse order on every line
+		
+				/home/apdev/sagar/sagar2> awk '{ for (i=NF; i>0; i--) printf( "%s " , $i ); printf( "\n" ) }' v1
+				vj hi 
+				favour? this me do please you can 
+				sure. yah
+				
+				
+		ex : # Remove duplicate, consecutive lines
+		
+				/home/apdev/sagar/sagar2> cat v1
+				hi vj
+				hi vj
+				can you please do me this favour?
+				yah sure.
+				yah sure.
+
+				/home/apdev/sagar/sagar2> awk 'a !~ $0; { a = $0 }' v1														# any true expression is the same as "{ print }"
+				hi vj
+				can you please do me this favour?
+				yah sure.
+				
+				
+		ex : # Remove duplicate, nonconsecutive lines
+		
+				/home/apdev/sagar/sagar2> cat v1
+				hi vj
+				can you please do me this favour?
+				yah sure.
+				hi vj
+				yah sure.
+
+				/home/apdev/sagar/sagar2> awk '!a[$0]++' v1
+				hi vj
+				can you please do me this favour?
+				yah sure.
+				
+				
+		
+		4. Selective Printing of Certain Lines
+		---------------------------------------
+		
+		ex : # Print the first 3 lines of a file
+		
+				/home/apdev/sagar/sagar2> awk 'NR < 4' v1      (OR)      awk '1; NR == 3 { exit }'
+				hi vj
+				can you please do me this favour?
+				yah sure.
+				
+				
+		ex : # Print the last 2 lines of a file
+		
+				/home/apdev/sagar/sagar2> awk '{ a = b "\n" $0; b = $0}; END { print a }' v1
+				what about you?
+				how is everything going.
+				
+				
+		ex : # Print the last line of a file
+		
+				/home/apdev/sagar/sagar2> awk 'END { print }' v1
+				how is everything going.
+				
+				
+		ex : # Print the lines having word "you"
+		
+				/home/apdev/sagar/sagar2> awk '/you/' v1																# for lines that do not have "you" : awk '!/you/' v1
+				can you please do me this favour?
+				what about you?
+				
+				
+		ex : # Print the line immediately before a line that matches "vj"												# for line immediately after : awk '/vj/ {getline ; print }' v1
+		
+				/home/apdev/sagar/sagar2> cat v1
+				hi vj
+				can you please do me this favour?
+				yah sure.
+				what about you?
+				hi vj
+				how is everything going.
+				
+				/home/apdev/sagar/sagar2> awk '/vj/ { print ( x=="" ? "match on line 1" : x ) }; { x = $0 }' v1
+				match on line 1
+				what about you?
+				
+				
+		ex : # Print lines having length less than 20
+		
+				/home/apdev/sagar/sagar2> awk 'length < 20' v1
+				hi vj
+				yah sure.
+				what about you?
+				hi vj
+				
+				
+		ex : # Print a section of file from line having "about" to end of file
+		
+				/home/apdev/sagar/sagar2> awk '/about/,0' v1
+				what about you?
+				hi vj
+				how is everything going.
+				
+				
+		ex : # Print lines from 2 to 4 of a file
+		
+				/home/apdev/sagar/sagar2> awk 'NR==2,NR==4' v1
+				can you please do me this favour?
+				yah sure.
+				what about you?
+				
+				
+		ex : # Print section of a file between two regular expressions 
+		
+				/home/apdev/sagar/sagar2> awk '/please/,/about/' v1
+				can you please do me this favour?
+				yah sure.
+				what about you?
+				
+				
+		ex : # Print last word of file
+		
+				/home/apdev/sagar/sagar2> awk '{ f=$NF }; END{ print f }' v1
+				sure.
+				
+		
+		5. Selective Deletion of Certain Lines
+		---------------------------------------
+		ex : # Delete all blank lines from a file
+		
+				/home/apdev/sagar/sagar2> cat v1
+				hi vj
+
+				can you please do me this favour?
+
+				yah sure.
+				
+				/home/apdev/sagar/sagar2> awk 'NF' v1		(OR)		awk '/./' v1
+				hi vj
+				can you please do me this favour?
+				yah sure.
+				
+
+
+
+
