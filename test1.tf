@@ -1,6 +1,6 @@
 terraform {
   backend "remote" {
-    organization = "sentinel"
+    organization = "sentinel90"
 
     workspaces {
       name = "terraform1"
