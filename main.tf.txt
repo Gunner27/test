@@ -8,6 +8,7 @@ module "write-files" {
 
 module "read-files" {
   source = "./modules/read-files"
+  depends_on = [module.write-files]
 }
 
 output "fruit" {
