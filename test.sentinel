@@ -1,7 +1,9 @@
-param "day" {
-  value = "monday"
-}
+import "tfconfig"
 
-param "hour" {
-  value = 7
+# filename_value is the raw, non-interpolated string
+filename_value = tfconfig.resources.local_file.accounts.config.filename
+
+main = rule {
+    filename_value contains "${var.domain}" and
+    filename_value contains "${var.subdomain}"
 }
